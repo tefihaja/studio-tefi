@@ -1,5 +1,10 @@
 # Studio Tefi
 
-Planning éditorial perso : contenus, plateformes, comptes, scripts, calendrier.
+Planning éditorial, production, Projection, Business et facturation.
 
-Ouvre `index.html` via GitHub Pages. Pour retrouver tes données sur tous tes appareils, active la synchro GitHub dans **Réglages** avec un jeton qui a la permission `gist`.
+Fichiers du site :
+- `index.html` : l'application
+- `sw.js` : le mode hors connexion (à garder à côté de `index.html`)
+- `versions/` : les anciennes versions archivées
+
+Pour retrouver tes données sur tous tes appareils, active la synchro GitHub dans **Réglages** avec un jeton qui a la permission `gist`.
