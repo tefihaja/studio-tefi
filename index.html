@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Studio Tefi · version 2.1 · 16 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -354,6 +355,11 @@ tbody tr:hover td{background:var(--surface-2)}
 .sync-box{display:flex;flex-direction:column;gap:10px}
 .code{font-family:var(--f-mono);font-size:12.5px;background:var(--surface-2);padding:2px 6px;border-radius:5px;overflow-wrap:anywhere}
 @media (max-width:899px){.nav-btn{font-size:10.5px;padding:6px 2px}}
+.shoot{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr) auto;grid-template-areas:'start end loc x' 'note note note note' 'sum sum sum sum';gap:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px;align-items:end}
+.sh-start{grid-area:start}.sh-end{grid-area:end}.sh-loc{grid-area:loc}.sh-x{grid-area:x}.sh-note{grid-area:note}.sh-sum{grid-area:sum;font-weight:600;color:var(--fg)}
+@media (max-width:620px){.shoot{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'start end' 'loc loc' 'note note' 'sum x'}.sh-x{justify-self:end}}
+.chan{display:flex;flex-direction:column;gap:12px}
+.chan-h{display:flex;align-items:baseline;gap:10px;padding-top:6px}
 </style>
 
 
@@ -383,8 +389,13 @@ tbody tr:hover td{background:var(--surface-2)}
 (function(){
 "use strict";
 /* ================= Constantes ================= */
-const APP_VERSION='2.0';
+const APP_VERSION='2.1';
 const VERSIONS=[
+  {v:'2.1',date:'2026-10-16',items:[
+    "Plusieurs tournages par contenu, chacun d'un jour ou sur plusieurs jours (du… au…), avec son lieu et une note",
+    'Nouvelle étape « En production » entre Écriture et Tournage',
+    'Types de distribution : réseaux sociaux, TV, cinéma, streaming, festival — et indication « Uniquement réseaux » sur chaque contenu'
+  ]},
   {v:'2.0',date:'2026-10-16',items:[
     "Onglet Réseaux : plateformes et comptes au même endroit, et ajout rapide d'un compte dès l'accueil",
     'Nature du compte : perso ou pro (filtrable partout)',
@@ -400,7 +411,7 @@ const VERSIONS=[
   ]}
 ];
 const STATUSES=[
-  {id:'idee',label:'Idée',c:'#8A8FA3'},{id:'ecriture',label:'Écriture',c:'#5B6CFF'},
+  {id:'idee',label:'Idée',c:'#8A8FA3'},{id:'ecriture',label:'Écriture',c:'#5B6CFF'},{id:'production',label:'En production',c:'#9B4DCA'},
   {id:'tournage',label:'Tournage',c:'#E0533D'},{id:'montage',label:'Montage',c:'#C98C00'},
   {id:'pret',label:'Prêt',c:'#14A37F'},{id:'publie',label:'Publié',c:'#5D6472'}
 ];
@@ -423,9 +434,13 @@ const DEFAULT_SETTINGS={
     {id:'famille',label:'Famille'},{id:'motivation',label:'Motivation'}
   ],
   platforms:[
-    {id:'facebook',label:'Facebook',color:'#1877F2'},
-    {id:'tiktok',label:'TikTok',color:'#00A3A3'},
-    {id:'instagram',label:'Instagram',color:'#D62976'}
+    {id:'facebook',label:'Facebook',color:'#1877F2',channel:'social'},
+    {id:'tiktok',label:'TikTok',color:'#00A3A3',channel:'social'},
+    {id:'instagram',label:'Instagram',color:'#D62976',channel:'social'}
+  ],
+  channels:[
+    {id:'social',label:'Réseaux sociaux'},{id:'tv',label:'TV'},{id:'cinema',label:'Cinéma'},
+    {id:'streaming',label:'Streaming / VOD'},{id:'festival',label:'Festival'}
   ]
 };
 const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -475,15 +490,22 @@ const savedUI=lsGet(LS_UI)||{};
 const S={contents:{},accounts:{},settings:null,history:[],mode:'pending',loaded:false,
   ui:Object.assign({calMode:'month',cursor:today(),selDay:today(),showProd:true,listMode:'board',search:'',ideaType:'concept',homeSel:'upcoming'},savedUI)};
 S.ui.view='home';S.ui.cursor=today();S.ui.selDay=today();
-S.ui.filters=Object.assign({platform:'',account:'',nature:'',type:'',theme:'',status:''},savedUI.filters||{});
+S.ui.filters=Object.assign({channel:'',platform:'',account:'',nature:'',type:'',theme:'',status:''},savedUI.filters||{});
 const VIEW_IDS=['home','networks','calendar','contents','ideas','settings'];
 let hashView=null;if(location.hash){const h=location.hash.slice(1);if(VIEW_IDS.includes(h))hashView=h;}
 if(hashView)S.ui.view=hashView;
 const saveUI=()=>{const u=Object.assign({},S.ui);delete u.view;lsSet(LS_UI,u);};
-function settings(){const st=S.settings||{};return {types:st.types||DEFAULT_SETTINGS.types,themes:st.themes||DEFAULT_SETTINGS.themes,platforms:st.platforms||DEFAULT_SETTINGS.platforms};}
+function settings(){const st=S.settings||{};return {types:st.types||DEFAULT_SETTINGS.types,themes:st.themes||DEFAULT_SETTINGS.themes,platforms:(st.platforms||DEFAULT_SETTINGS.platforms).map(p=>p.channel?p:Object.assign({},p,{channel:'social'})),channels:st.channels||DEFAULT_SETTINGS.channels};}
 const typeOf=id=>settings().types.find(t=>t.id===id)||{id:'',label:'Sans format',color:'#8A8FA3'};
 const themeOf=id=>settings().themes.find(t=>t.id===id);
-const platOf=id=>settings().platforms.find(p=>p.id===id)||{id:'',label:'Plateforme ?',color:'#8A8FA3'};
+const platOf=id=>settings().platforms.find(p=>p.id===id)||{id:'',label:'Plateforme ?',color:'#8A8FA3',channel:'social'};
+const chanOf=id=>settings().channels.find(c=>c.id===id)||{id:id||'',label:'Autre'};
+const isSocial=pid=>(platOf(pid).channel||'social')==='social';
+function distOf(c){const out=[];(c.publications||[]).forEach(p=>{const a=S.accounts[p.accountId];if(!a)return;const ch=platOf(a.platform).channel||'social';if(!out.includes(ch))out.push(ch);});return out;}
+function distLabel(c){const d=distOf(c);if(!d.length)return '';if(d.length===1&&d[0]==='social')return 'Uniquement réseaux';return d.map(id=>chanOf(id).label).join(' + ');}
+const distPill=c=>{const l=distLabel(c);return l?'<span class="pill plain" title="Distribution">'+esc(l)+'</span>':'';};
+const shootEnd=s=>isValidDate(s.end)&&s.end>=s.start?s.end:s.start;
+function fmtShoot(s){if(!isValidDate(s.start))return 'Date à fixer';const e=shootEnd(s);if(e===s.start)return fmtShort(s.start);const n=diffDays(e,s.start)+1;return 'du '+fmtShort(s.start)+' au '+fmtShort(e)+' ('+n+' j)';}
 const statusOf=id=>STATUSES.find(s=>s.id===id)||STATUSES[0];
 const accounts=()=>{const order=settings().platforms.map(p=>p.id);return Object.values(S.accounts).sort((a,b)=>(order.indexOf(a.platform)-order.indexOf(b.platform))||String(a.handle).localeCompare(b.handle));};
 const contents=()=>Object.values(S.contents);
@@ -491,7 +513,9 @@ const accLabel=a=>a?a.handle:'Sans compte';
 const accColor=a=>a?platOf(a.platform).color:'#8A8FA3';
 const titleOf=c=>c&&c.title&&c.title.trim()?c.title:'Sans titre';
 const natBadge=a=>!a?'':a.nature==='pro'?'<span class="nat pro">Pro</span>':a.nature==='perso'?'<span class="nat">Perso</span>':'<span class="nat unset" title="Nature à préciser dans Réseaux">?</span>';
-function normContent(c){c=Object.assign({title:'',type:'',themes:[],status:'ecriture',publications:[],shootDate:'',editDate:'',duration:'',location:'',cast:'',gear:'',scenes:[],caption:'',hashtags:'',notes:''},c);
+function normContent(c){c=Object.assign({title:'',type:'',themes:[],status:'ecriture',publications:[],shoots:null,editDate:'',duration:'',cast:'',gear:'',scenes:[],caption:'',hashtags:'',notes:''},c);
+  if(!Array.isArray(c.shoots)){c.shoots=(isValidDate(c.shootDate)||c.location)?[{id:'s0',start:isValidDate(c.shootDate)?c.shootDate:'',end:'',location:c.location||'',note:''}]:[];}
+  delete c.shootDate;delete c.location;
   if(!Array.isArray(c.themes))c.themes=[];if(!Array.isArray(c.publications))c.publications=[];if(!Array.isArray(c.scenes))c.scenes=[];return c;}
 
 /* ================= Stockage ================= */
@@ -611,11 +635,12 @@ const Sync={
 /* ================= Filtres & événements ================= */
 function filtersActive(){const f=S.ui.filters;return Object.keys(f).some(k=>f[k]);}
 function passAcc(a){const f=S.ui.filters;
+  if(f.channel&&(!a||(platOf(a.platform).channel||'social')!==f.channel))return false;
   if(f.account&&(!a||a.id!==f.account))return false;if(f.platform&&(!a||a.platform!==f.platform))return false;
   if(f.nature&&(!a||(a.nature||'')!==f.nature))return false;return true;}
 function passContent(c){const f=S.ui.filters;if(f.type&&c.type!==f.type)return false;if(f.status&&c.status!==f.status)return false;
   if(f.theme&&!(c.themes||[]).includes(f.theme))return false;
-  if(f.account||f.platform||f.nature)return (c.publications||[]).some(p=>passAcc(S.accounts[p.accountId]));return true;}
+  if(f.channel||f.account||f.platform||f.nature)return (c.publications||[]).some(p=>passAcc(S.accounts[p.accountId]));return true;}
 function events(opt){
   opt=Object.assign({filtered:true,prod:S.ui.showProd},opt||{});
   const out=[];
@@ -627,7 +652,7 @@ function events(opt){
       out.push({kind:'pub',date:p.date,time:p.time||'',c,p,a});
     }
     if(opt.prod){
-      if(isValidDate(c.shootDate))out.push({kind:'shoot',date:c.shootDate,time:'',c});
+      (c.shoots||[]).forEach(s=>{if(!isValidDate(s.start))return;const n=Math.min(diffDays(shootEnd(s),s.start)+1,120);for(let i=0;i<n;i++)out.push({kind:'shoot',date:addDays(s.start,i),time:'',c,s,di:i,dn:n});});
       if(isValidDate(c.editDate))out.push({kind:'edit',date:c.editDate,time:'',c});
     }
   }
@@ -639,9 +664,9 @@ function byDate(evs){const m={};evs.forEach(e=>{(m[e.date]=m[e.date]||[]).push(e
 function evColor(e){return e.kind==='pub'?accColor(e.a):typeOf(e.c.type).color;}
 function evChip(e){
   const k=e.kind;const cls='ev'+(k!=='pub'?' prod':'')+(k==='pub'&&e.p.done?' done':'')+(isLate(e)?' late':'');
-  const lead=k==='shoot'?'Tournage':k==='edit'?'Montage':(e.time||'');
-  const drag=k+':'+e.c.id+':'+(k==='pub'?e.p.id:'');
-  const tip=(k==='pub'?accLabel(e.a)+' · ':lead+' · ')+titleOf(e.c);
+  const lead=k==='shoot'?'Tournage'+(e.dn>1?' '+(e.di+1)+'/'+e.dn:''):k==='edit'?'Montage':(e.time||'');
+  const drag=k+':'+e.c.id+':'+(k==='pub'?e.p.id:k==='shoot'?e.s.id:'')+':'+e.date;
+  const tip=(k==='pub'?accLabel(e.a)+' · ':lead+(k==='shoot'&&e.s.location?' · '+e.s.location:'')+' · ')+titleOf(e.c);
   return '<button class="'+cls+'" style="--c:'+evColor(e)+'" draggable="true" data-drag="ev:'+esc(drag)+'" data-act="peek" data-id="'+esc(e.c.id)+'" title="'+esc(tip)+'">'+
     (lead?'<span class="t">'+esc(lead)+'</span>':'')+'<span class="n">'+esc(titleOf(e.c))+'</span></button>';
 }
@@ -655,7 +680,8 @@ function evRow(e,opts){
   opts=opts||{};const c=e.c;const t=typeOf(c.type);const late=isLate(e);
   let kindTag;
   if(e.kind==='pub')kindTag='<span class="pill" style="--c:'+accColor(e.a)+'"><span class="dot" style="--c:'+accColor(e.a)+'"></span>'+esc(e.a?platOf(e.a.platform).label+' · '+e.a.handle:'Compte à choisir')+'</span>';
-  else kindTag='<span class="pill plain">'+(e.kind==='shoot'?'Tournage':'Montage')+'</span>';
+  else if(e.kind==='shoot')kindTag='<span class="pill" style="--c:#E0533D">Tournage'+(e.dn>1?' · jour '+(e.di+1)+'/'+e.dn:'')+'</span>'+(e.s.location?'<span>📍 '+esc(e.s.location)+'</span>':'');
+  else kindTag='<span class="pill plain">Montage</span>';
   const when=opts.showDate?'<div class="when'+(late?' late':'')+'"><b>'+pd(e.date).getDate()+'</b><span class="mono muted">'+MSHORT[pd(e.date).getMonth()]+'</span></div>':'';
   return '<div class="row">'+when+'<button class="row-main" data-act="peek" data-id="'+esc(c.id)+'"><b>'+esc(titleOf(c))+'</b><span class="row-meta">'+kindTag+
     '<span class="pill" style="--c:'+t.color+'">'+esc(t.label)+'</span>'+(e.time?'<span class="mono">'+esc(e.time)+'</span>':'')+
@@ -673,6 +699,7 @@ function filterBar(extra){
   const opt=(v,l,sel)=>'<option value="'+esc(v)+'"'+(sel===v?' selected':'')+'>'+esc(l)+'</option>';
   const sel=(k,label,opts)=>'<select class="inp'+(f[k]?' on':'')+'" id="f-'+k+'" data-filter="'+k+'" aria-label="'+label+'">'+opts+'</select>';
   let h='<div class="filters" role="group" aria-label="Filtres">';
+  h+=sel('channel','Distribution',opt('','Toutes distributions',f.channel)+st.channels.map(c=>opt(c.id,c.id==='social'?'Uniquement réseaux':c.label,f.channel)).join(''));
   h+=sel('platform','Plateforme',opt('','Toutes plateformes',f.platform)+st.platforms.map(p=>opt(p.id,p.label,f.platform)).join(''));
   h+=sel('account','Compte',opt('','Tous les comptes',f.account)+st.platforms.map(p=>{const as=accounts().filter(a=>a.platform===p.id);return as.length?'<optgroup label="'+esc(p.label)+'">'+as.map(a=>opt(a.id,a.handle,f.account)).join('')+'</optgroup>':'';}).join(''));
   h+=sel('nature','Nature du compte',opt('','Perso et pro',f.nature)+NATURES.map(n=>opt(n.id,'Comptes '+n.label.toLowerCase(),f.nature)).join(''));
@@ -686,8 +713,8 @@ function filterBar(extra){
 /* ================= Formulaire d'ajout de compte ================= */
 function accQuickForm(idp){
   const st=settings();
-  return '<form class="quick-acc" data-form="acc"><select class="inp" id="'+idp+'-plat" data-k="plat" aria-label="Plateforme">'+st.platforms.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.label)+'</option>').join('')+'</select>'+
-    '<input class="inp" id="'+idp+'-handle" data-k="handle" placeholder="@nomducompte" autocomplete="off" autocapitalize="off" aria-label="Nom du compte">'+
+  return '<form class="quick-acc" data-form="acc"><select class="inp" id="'+idp+'-plat" data-k="plat" aria-label="Plateforme">'+st.channels.map(ch=>{const ps=st.platforms.filter(p=>p.channel===ch.id);return ps.length?'<optgroup label="'+esc(ch.label)+'">'+ps.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.label)+'</option>').join('')+'</optgroup>':'';}).join('')+'</select>'+
+    '<input class="inp" id="'+idp+'-handle" data-k="handle" placeholder="@compte, chaîne ou salle" autocomplete="off" autocapitalize="off" aria-label="Nom du compte">'+
     '<select class="inp" id="'+idp+'-nat" data-k="nat" aria-label="Nature du compte">'+NATURES.map(n=>'<option value="'+n.id+'">'+n.label+'</option>').join('')+'</select>'+
     '<button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form>';
 }
@@ -699,7 +726,7 @@ function homeList(sel){
   const cs=contents();
   if(sel==='week')return {title:'Cette semaine',items:events({filtered:false,prod:true}).filter(e=>e.date>=ws&&e.date<=we),kind:'ev',empty:'Rien de prévu cette semaine.'};
   if(sel==='late')return {title:'En retard',items:all.filter(isLate),kind:'ev',empty:'Aucune publication en retard.'};
-  if(sel==='prod')return {title:'En production',items:cs.filter(c=>['ecriture','tournage','montage','pret'].includes(c.status)).sort((a,b)=>STATUSES.findIndex(s=>s.id===a.status)-STATUSES.findIndex(s=>s.id===b.status)),kind:'c',empty:'Aucun contenu en cours.'};
+  if(sel==='prod')return {title:'En cours',items:cs.filter(c=>['ecriture','production','tournage','montage','pret'].includes(c.status)).sort((a,b)=>STATUSES.findIndex(s=>s.id===a.status)-STATUSES.findIndex(s=>s.id===b.status)),kind:'c',empty:'Aucun contenu en cours.'};
   if(sel==='ideas')return {title:'Idées en attente',items:cs.filter(c=>c.status==='idee').sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)),kind:'c',empty:'Aucune idée notée.'};
   if(sel&&sel.startsWith('day:')){const d=sel.slice(4);return {title:fmtDay(d),items:events({filtered:false,prod:true}).filter(e=>e.date===d),kind:'ev',empty:'Rien de prévu ce jour-là.',day:d};}
   return {title:'À venir · 14 jours',items:all.filter(e=>e.date>=t&&e.date<=addDays(t,13)&&!e.p.done),kind:'ev',empty:'Rien de planifié. Ajoute une diffusion à un contenu pour la voir ici.'};
@@ -710,7 +737,7 @@ function viewHome(){
   const allProd=events({filtered:false,prod:true});
   const cs=contents();const accs=accounts();
   const n={upcoming:homeList('upcoming').items.length,week:homeList('week').items.length,late:all.filter(isLate).length,
-    prod:cs.filter(c=>['ecriture','tournage','montage','pret'].includes(c.status)).length,ideas:cs.filter(c=>c.status==='idee').length};
+    prod:cs.filter(c=>['ecriture','production','tournage','montage','pret'].includes(c.status)).length,ideas:cs.filter(c=>c.status==='idee').length};
   const sel=S.ui.homeSel||'upcoming';
   let h='<div class="wrap"><div class="head"><div><span class="label">'+esc(fmtDay(t))+'</span><h1>Ton planning</h1></div>'+
     '<button class="btn primary" data-act="new">'+ICON.plus+'Nouveau contenu</button></div>';
@@ -722,7 +749,7 @@ function viewHome(){
   h+=accQuickForm('qa')+'</section>';
 
   const tile=(id,label,num,sub,alert)=>'<button class="stat'+(alert&&num?' alert':'')+'" data-act="home-sel" data-sel="'+id+'" aria-pressed="'+(sel===id)+'"><span class="label">'+label+'</span><strong>'+num+'</strong><span class="muted">'+sub+'</span></button>';
-  h+='<div class="stats">'+tile('upcoming','À venir',n.upcoming,'sur 14 jours')+tile('week','Cette semaine',n.week,'publications et tournages')+tile('late','En retard',n.late,'non publiées',true)+tile('prod','En production',n.prod,'écriture → prêt')+tile('ideas','Idées',n.ideas,'en attente')+'</div>';
+  h+='<div class="stats">'+tile('upcoming','À venir',n.upcoming,'sur 14 jours')+tile('week','Cette semaine',n.week,'publications et tournages')+tile('late','En retard',n.late,'non publiées',true)+tile('prod','En cours',n.prod,'écriture → prêt')+tile('ideas','Idées',n.ideas,'en attente')+'</div>';
 
   const bd=byDate(allProd);
   h+='<section class="panel"><div class="panel-h"><h2>Semaine du '+fmtShort(ws)+' au '+fmtShort(we)+'</h2><button class="btn ghost small" data-act="goto-cal">Calendrier'+ICON.arrow+'</button></div><div class="strip">';
@@ -755,23 +782,32 @@ function viewHome(){
 }
 
 /* ================= Vue : Réseaux ================= */
+function platCard(p,accs){
+  const st=settings();const as=accs.filter(a=>a.platform===p.id);const social=p.channel==='social';
+  return '<section class="panel plat-card"><div class="set-item"><input type="color" class="swatch" id="pc-'+esc(p.id)+'" value="'+esc(p.color)+'" data-plat-color="'+esc(p.id)+'" aria-label="Couleur de '+esc(p.label)+'">'+
+    '<input class="inp" id="pl-'+esc(p.id)+'" value="'+esc(p.label)+'" data-plat-label="'+esc(p.id)+'" aria-label="Nom de la plateforme" style="font-weight:700">'+
+    '<button class="icon-btn danger" data-act="plat-del" data-id="'+esc(p.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(p.label)+'">'+ICON.trash+'</button></div>'+
+    '<label class="field"><span>Type de distribution</span><select class="inp" id="pch-'+esc(p.id)+'" data-plat-channel="'+esc(p.id)+'">'+st.channels.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===p.channel?' selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select></label>'+
+    '<span class="label">'+(social?'Comptes':'Chaînes, salles ou émissions')+'</span>'+
+    (as.length?as.map(a=>{const used=contents().reduce((n,c)=>n+(c.publications||[]).filter(x=>x.accountId===a.id).length,0);
+      return '<div class="acc-line"><input class="inp" id="acc-'+esc(a.id)+'" value="'+esc(a.handle)+'" data-acc-handle="'+esc(a.id)+'" aria-label="Nom">'+
+        '<div class="seg sm" role="group" aria-label="Nature">'+NATURES.map(nt=>'<button data-act="acc-nature" data-id="'+esc(a.id)+'" data-n="'+nt.id+'" aria-pressed="'+(a.nature===nt.id)+'">'+nt.label+'</button>').join('')+'</div>'+
+        '<span class="mono muted used">'+plural(used,'diffusion')+'</span>'+
+        '<button class="icon-btn sm danger" data-act="acc-del" data-id="'+esc(a.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(a.handle)+'">'+ICON.trash+'</button></div>';}).join('')
+     :'<span class="hint">Rien pour l\'instant. Ajoute-en avec le formulaire du haut.</span>')+'</section>';
+}
 function viewNetworks(){
   const st=settings();const accs=accounts();
-  let h='<div class="wrap"><div class="head"><div><span class="label">Réseaux</span><h1>Plateformes &amp; comptes</h1><p class="muted">Ajoute chaque compte sur sa plateforme et indique s\'il est perso ou pro.</p></div></div>';
+  let h='<div class="wrap"><div class="head"><div><span class="label">Réseaux &amp; distribution</span><h1>Où tu diffuses</h1><p class="muted">Réseaux sociaux, TV, cinéma… Chaque plateforme appartient à un type de distribution, et contient tes comptes, chaînes ou salles.</p></div></div>';
   h+='<section class="panel"><div class="panel-h"><h2>Ajouter un compte</h2></div>'+accQuickForm('na').replace('class="quick-acc"','class="quick-acc" style="margin-top:0"')+'</section>';
-  h+='<div class="grid-2">';
-  h+=st.platforms.map(p=>{const as=accs.filter(a=>a.platform===p.id);
-    return '<section class="panel plat-card"><div class="set-item"><input type="color" class="swatch" id="pc-'+esc(p.id)+'" value="'+esc(p.color)+'" data-plat-color="'+esc(p.id)+'" aria-label="Couleur de '+esc(p.label)+'">'+
-      '<input class="inp" id="pl-'+esc(p.id)+'" value="'+esc(p.label)+'" data-plat-label="'+esc(p.id)+'" aria-label="Nom de la plateforme" style="font-weight:700">'+
-      '<button class="icon-btn danger" data-act="plat-del" data-id="'+esc(p.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer la plateforme '+esc(p.label)+'">'+ICON.trash+'</button></div>'+
-      (as.length?as.map(a=>{const used=contents().reduce((n,c)=>n+(c.publications||[]).filter(x=>x.accountId===a.id).length,0);
-        return '<div class="acc-line"><input class="inp" id="acc-'+esc(a.id)+'" value="'+esc(a.handle)+'" data-acc-handle="'+esc(a.id)+'" aria-label="Nom du compte">'+
-          '<div class="seg sm" role="group" aria-label="Nature">'+NATURES.map(nt=>'<button data-act="acc-nature" data-id="'+esc(a.id)+'" data-n="'+nt.id+'" aria-pressed="'+(a.nature===nt.id)+'">'+nt.label+'</button>').join('')+'</div>'+
-          '<span class="mono muted used">'+plural(used,'diffusion')+'</span>'+
-          '<button class="icon-btn sm danger" data-act="acc-del" data-id="'+esc(a.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(a.handle)+'">'+ICON.trash+'</button></div>';}).join('')
-       :'<span class="hint">Aucun compte '+esc(p.label)+' pour l\'instant.</span>')+'</section>';}).join('');
-  h+='<section class="panel plat-card"><h3>Ajouter une plateforme</h3><p class="hint" style="margin:0">YouTube, LinkedIn, X, Snapchat, Threads…</p><form class="add-form" style="margin-top:0" data-form="plat"><input class="inp" id="plat-new" placeholder="Nom de la plateforme" autocomplete="off"><input type="color" class="swatch" id="plat-new-color" value="#FF0000" aria-label="Couleur"><button class="btn" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
-  h+='</div>';
+  st.channels.forEach(ch=>{const ps=st.platforms.filter(p=>p.channel===ch.id);
+    h+='<div class="chan"><div class="chan-h"><h2>'+esc(ch.label)+'</h2><span class="mono muted">'+plural(ps.length,'plateforme')+'</span></div>';
+    h+=ps.length?'<div class="grid-2">'+ps.map(p=>platCard(p,accs)).join('')+'</div>':'<p class="hint" style="margin:0">Aucune plateforme '+esc(ch.label)+'. '+(ch.id==='tv'?'Ex. : TVM, Kolo TV, Viva TV.':ch.id==='cinema'?'Ex. : Canal Olympia, Ciné Rex.':ch.id==='streaming'?'Ex. : YouTube, Netflix.':'')+'</p>';
+    h+='</div>';});
+  h+='<div class="grid-2"><section class="panel plat-card"><h3>Ajouter une plateforme</h3><p class="hint" style="margin:0">Une chaîne TV, un cinéma, YouTube, un festival… Pour la TV et le cinéma, une entrée du même nom est créée pour que tu puisses la choisir tout de suite dans tes diffusions.</p>'+
+    '<form class="add-form" style="margin-top:0" data-form="plat"><input class="inp" id="plat-new" placeholder="Nom (ex. TVM)" autocomplete="off"><select class="inp" id="plat-new-ch" aria-label="Type de distribution">'+st.channels.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>').join('')+'</select><input type="color" class="swatch" id="plat-new-color" value="#3D5A80" aria-label="Couleur"><button class="btn" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
+  h+='<section class="panel plat-card"><h3>Types de distribution</h3><div class="set-list">'+st.channels.map(c=>'<div class="set-item"><input class="inp" id="ch-'+esc(c.id)+'" value="'+esc(c.label)+'" data-chan-label="'+esc(c.id)+'" aria-label="Nom du type">'+(c.id==='social'?'':'<button class="icon-btn sm danger" data-act="chan-del" data-id="'+esc(c.id)+'" data-confirm="✓" aria-label="Supprimer '+esc(c.label)+'">'+ICON.x+'</button>')+'</div>').join('')+
+    '</div><form class="add-form" data-form="chan"><input class="inp" id="chan-new" placeholder="Ex. Radio, Affichage" autocomplete="off"><button class="btn" type="submit">'+ICON.plus+'Ajouter</button></form></section></div>';
   if(accs.length)h+='<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="new">'+ICON.plus+'Créer un contenu</button><button class="btn" data-nav="home">Aller au résumé</button></div>';
   return h+'</div>';
 }
@@ -825,7 +861,7 @@ function accChips(c,max){
     return '<span class="chip-acc'+(late?' late':'')+'"><span class="dot" style="--c:'+accColor(a)+'"></span>'+esc(accLabel(a))+(isValidDate(p.date)?' · '+fmtShort(p.date):'')+(p.done?' ✓':'')+'</span>';}).join('')+(ps.length>max?'<span class="chip-acc">+'+(ps.length-max)+'</span>':'');
 }
 function matchSearch(c){const q=S.ui.search.trim().toLowerCase();if(!q)return true;
-  return [c.title,c.notes,c.caption,c.hashtags,c.cast,c.location,(c.themes||[]).map(id=>(themeOf(id)||{}).label).join(' '),(c.scenes||[]).map(s=>s.heading+' '+s.body).join(' ')].join(' ').toLowerCase().includes(q);}
+  return [c.title,c.notes,c.caption,c.hashtags,c.cast,(c.shoots||[]).map(s=>s.location+' '+s.note).join(' '),(c.themes||[]).map(id=>(themeOf(id)||{}).label).join(' '),(c.scenes||[]).map(s=>s.heading+' '+s.body).join(' ')].join(' ').toLowerCase().includes(q);}
 function viewContents(){
   const u=S.ui;const list=contents().filter(c=>passContent(c)&&matchSearch(c)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   let h='<div class="wrap"><div class="head"><div><span class="label">Contenus</span><h1>Production</h1><p class="muted">Chaque contenu avance d\'une étape à l\'autre jusqu\'à sa publication.</p></div><button class="btn primary" data-act="new" data-status="ecriture">'+ICON.plus+'Nouveau contenu</button></div>';
@@ -841,19 +877,20 @@ function viewContents(){
         cs.map(card).join('')+(cs.length?'':'<p class="hint" style="margin:6px 4px">Glisse un contenu ici ou utilise la flèche d\'une carte.</p>')+'</div>';}).join('')+'</div>';
     if(ideasN&&u.filters.status!=='idee')h+='<p class="hint" style="margin:0">'+plural(ideasN,'idée')+' en attente dans <button class="btn ghost small" data-nav="ideas">la banque d\'idées</button></p>';
   }else{
-    h+=list.length?'<div class="table-wrap"><table><thead><tr><th>Titre</th><th>Format</th><th>Thématiques</th><th>Statut</th><th>Diffusion</th><th>Prochaine date</th></tr></thead><tbody>'+
+    h+=list.length?'<div class="table-wrap"><table><thead><tr><th>Titre</th><th>Format</th><th>Thématiques</th><th>Statut</th><th>Distribution</th><th>Diffusion</th><th>Prochaine date</th></tr></thead><tbody>'+
       list.map(c=>{const t=typeOf(c.type),s=statusOf(c.status),np=nextPub(c);
-        return '<tr data-act="open" data-id="'+esc(c.id)+'"><td><b>'+esc(titleOf(c))+'</b></td><td><span class="pill" style="--c:'+t.color+'">'+esc(t.label)+'</span></td><td><div class="card-f">'+(themePills(c)||'<span class="muted">—</span>')+'</div></td><td><span class="pill" style="--c:'+s.c+'">'+s.label+'</span></td><td><div class="card-f">'+accChips(c,2)+'</div></td><td class="mono">'+(np&&isValidDate(np.date)?fmtShort(np.date)+(np.time?' · '+esc(np.time):''):'—')+'</td></tr>';}).join('')+'</tbody></table></div>'
+        return '<tr data-act="open" data-id="'+esc(c.id)+'"><td><b>'+esc(titleOf(c))+'</b></td><td><span class="pill" style="--c:'+t.color+'">'+esc(t.label)+'</span></td><td><div class="card-f">'+(themePills(c)||'<span class="muted">—</span>')+'</div></td><td><span class="pill" style="--c:'+s.c+'">'+s.label+'</span></td><td>'+(distLabel(c)?esc(distLabel(c)):'<span class="muted">—</span>')+'</td><td><div class="card-f">'+accChips(c,2)+'</div></td><td class="mono">'+(np&&isValidDate(np.date)?fmtShort(np.date)+(np.time?' · '+esc(np.time):''):'—')+'</td></tr>';}).join('')+'</tbody></table></div>'
       :'<div class="empty"><b>Aucun résultat</b>Change ta recherche ou tes filtres.</div>';
   }
   return h+'</div>';
 }
+function nextShootLabel(c){const t=today();const s=(c.shoots||[]).filter(x=>isValidDate(x.start)&&shootEnd(x)>=t).sort((a,b)=>a.start<b.start?-1:1)[0];return s?'Tournage '+fmtShoot(s)+((c.shoots||[]).length>1?' · '+c.shoots.length+' sessions':''):'';}
 function card(c){
   const t=typeOf(c.type);const i=STATUSES.findIndex(s=>s.id===c.status);const nx=STATUSES[i+1];
   return '<div class="card" data-act="open" data-id="'+esc(c.id)+'" draggable="true" data-drag="card:'+esc(c.id)+'">'+
     '<div class="card-b"><span class="pill" style="--c:'+t.color+'">'+esc(t.label)+'</span>'+(c.duration?'<span class="mono muted">'+esc(c.duration)+'</span>':'')+'</div>'+
-    '<div class="card-t">'+esc(titleOf(c))+'</div>'+((c.themes||[]).length?'<div class="card-f">'+themePills(c)+'</div>':'')+'<div class="card-f">'+accChips(c)+'</div>'+
-    (nx?'<div class="card-b"><span class="hint">'+(isValidDate(c.shootDate)&&['ecriture','tournage'].includes(c.status)?'Tournage '+fmtShort(c.shootDate):'')+'</span><button class="btn small ghost" data-act="advance" data-id="'+esc(c.id)+'" title="Passer à : '+nx.label+'">'+nx.label+ICON.arrow+'</button></div>':'')+'</div>';
+    '<div class="card-t">'+esc(titleOf(c))+'</div>'+(distLabel(c)?'<div class="card-f">'+distPill(c)+'</div>':'')+((c.themes||[]).length?'<div class="card-f">'+themePills(c)+'</div>':'')+'<div class="card-f">'+accChips(c)+'</div>'+
+    (nx?'<div class="card-b"><span class="hint">'+(['ecriture','production','tournage'].includes(c.status)?nextShootLabel(c):'')+'</span><button class="btn small ghost" data-act="advance" data-id="'+esc(c.id)+'" title="Passer à : '+nx.label+'">'+nx.label+ICON.arrow+'</button></div>':'')+'</div>';
 }
 
 /* ================= Vue : Idées ================= */
@@ -962,7 +999,8 @@ function diffSummary(b,a){
   if(J(b.publications)!==J(a.publications))p.push('Diffusion');
   if(J(b.scenes)!==J(a.scenes))p.push('Script');
   if(b.caption!==a.caption||b.hashtags!==a.hashtags)p.push('Légende');
-  if(['shootDate','editDate','location','cast','gear','duration'].some(k=>b[k]!==a[k]))p.push('Production');
+  if(J(b.shoots||[])!==J(a.shoots||[]))p.push('Tournages');
+  if(['editDate','cast','gear','duration'].some(k=>b[k]!==a[k]))p.push('Production');
   if(b.notes!==a.notes)p.push('Notes');
   return p.join(' · ')||'Modification';
 }
@@ -976,9 +1014,11 @@ function advance(id){const c=S.contents[id];if(!c)return;const i=STATUSES.findIn
   updateContent(id,x=>{x.status=nx.id;if(nx.id==='publie')x.publications.forEach(p=>{p.done=true;});});toast('« '+titleOf(c)+' » → '+nx.label);}
 function markDone(id,pid,val){updateContent(id,c=>{const p=c.publications.find(x=>x.id===pid);if(p)p.done=val!==false;syncStatusFromPubs(c);});if(val!==false)toast('Marqué comme publié');}
 function moveEvent(spec,date){
-  const [kind,cid,pid]=spec.split(':');
-  updateContent(cid,c=>{if(kind==='pub'){const p=c.publications.find(x=>x.id===pid);if(p)p.date=date;}else if(kind==='shoot')c.shootDate=date;else if(kind==='edit')c.editDate=date;},
-    (kind==='pub'?'Date de publication':kind==='shoot'?'Date de tournage':'Date de montage')+' → '+fmtShort(date));
+  const [kind,cid,xid,from]=spec.split(':');
+  if(kind==='shoot'){const delta=diffDays(date,from);if(!delta)return;
+    updateContent(cid,c=>{const s=c.shoots.find(x=>x.id===xid);if(!s)return;s.start=addDays(s.start,delta);if(isValidDate(s.end))s.end=addDays(s.end,delta);},'Tournage décalé de '+(delta>0?'+':'')+delta+' j');return;}
+  updateContent(cid,c=>{if(kind==='pub'){const p=c.publications.find(x=>x.id===xid);if(p)p.date=date;}else if(kind==='edit')c.editDate=date;},
+    (kind==='pub'?'Date de publication':'Date de montage')+' → '+fmtShort(date));
 }
 function setStatus(id,status){updateContent(id,c=>{c.status=status;if(status==='publie')c.publications.forEach(p=>{p.done=true;});});}
 function deleteContent(id){
@@ -988,7 +1028,7 @@ function deleteContent(id){
   toast('« '+titleOf(before)+' » supprimé',()=>{Store.saveContent(before);logChange('content','restore',id,titleOf(before),'Suppression annulée',null);toast('Contenu restauré');});
 }
 function addAccount(pl,handle,nat){
-  const h=normHandle(handle);if(!h){toast('Écris le nom du compte.');return false;}
+  const h=normHandle(handle,pl);if(!h){toast('Écris le nom du compte.');return false;}
   if(accounts().some(a=>a.platform===pl&&a.handle.toLowerCase()===h.toLowerCase())){toast('Ce compte existe déjà.');return false;}
   const a={id:uid(),platform:pl,handle:h,nature:nat||'perso',createdAt:Date.now()};
   Store.saveAccount(a);logChange('account','create',a.id,h,platOf(pl).label+' · '+(nat==='pro'?'Pro':'Perso'),null);
@@ -1024,7 +1064,7 @@ function importData(text){
   logChange('settings','update','import','Import de sauvegarde',plural((d.contents||[]).length,'contenu')+', '+plural((d.accounts||[]).length,'compte'),null);
   toast('Import terminé : '+plural((d.contents||[]).length,'contenu')+', '+plural((d.accounts||[]).length,'compte'));
 }
-function normHandle(v){v=String(v||'').trim().replace(/\s+/g,'');if(!v)return '';return v.startsWith('@')?v:'@'+v;}
+function normHandle(v,pid){if(pid&&!isSocial(pid))return String(v||'').trim().replace(/\s+/g,' ');v=String(v||'').trim().replace(/\s+/g,'');if(!v)return '';return v.startsWith('@')?v:'@'+v;}
 
 /* ================= Aperçu (clic sur un élément prévu) ================= */
 let peekId=null;
@@ -1034,7 +1074,7 @@ function renderPeek(){
   const c=S.contents[peekId];if(!c){closePeek();return;}
   const panel=$('#peek-panel');const st=panel.scrollTop;const ae=document.activeElement;const fid=ae&&ae.id&&panel.contains(ae)?ae.id:null;
   const t=typeOf(c.type);
-  let h='<div class="peek-h"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px"><div class="card-f"><span class="pill" style="--c:'+t.color+'">'+esc(t.label)+'</span>'+themePills(c)+'</div><h2>'+esc(titleOf(c))+'</h2></div><button class="icon-btn" data-act="peek-close" aria-label="Fermer">'+ICON.x+'</button></div>';
+  let h='<div class="peek-h"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px"><div class="card-f"><span class="pill" style="--c:'+t.color+'">'+esc(t.label)+'</span>'+distPill(c)+themePills(c)+'</div><h2>'+esc(titleOf(c))+'</h2></div><button class="icon-btn" data-act="peek-close" aria-label="Fermer">'+ICON.x+'</button></div>';
   h+='<div class="peek-b">';
   h+='<label class="field"><span>Statut</span><select class="inp" id="pk-status" data-pk="status" style="max-width:220px">'+STATUSES.map(s=>'<option value="'+s.id+'"'+(s.id===c.status?' selected':'')+'>'+s.label+'</option>').join('')+'</select></label>';
   h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Diffusion</h3><span class="mono muted">'+c.publications.length+'</span></div>';
@@ -1046,7 +1086,8 @@ function renderPeek(){
       '<button class="icon-btn sm danger" data-act="peek-delpub" data-pid="'+esc(p.id)+'" data-confirm="Retirer ?" aria-label="Retirer cette diffusion">'+ICON.trash+'</button></div>';}).join('')
     :'<p class="hint" style="margin:0">Pas encore planifié.</p>';
   h+='</div>';
-  const kv=[['Tournage',isValidDate(c.shootDate)?fmtDay(c.shootDate):''],['Montage',isValidDate(c.editDate)?fmtDay(c.editDate):''],['Durée',c.duration],['Lieu',c.location],['Participants',c.cast],['Matériel',c.gear]].filter(x=>x[1]);
+  if(c.shoots.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Tournages</h3><span class="mono muted">'+c.shoots.length+'</span></div><div class="rows">'+c.shoots.map(s=>'<div class="row"><div class="row-main" style="cursor:default"><b>'+esc(fmtShoot(s))+'</b><span class="row-meta">'+(s.location?'<span>📍 '+esc(s.location)+'</span>':'<span>Lieu à définir</span>')+(s.note?'<span>'+esc(s.note)+'</span>':'')+'</span></div></div>').join('')+'</div></div>';
+  const kv=[['Montage',isValidDate(c.editDate)?fmtDay(c.editDate):''],['Durée',c.duration],['Participants',c.cast],['Matériel',c.gear]].filter(x=>x[1]);
   if(kv.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Production</h3></div><div class="kvs">'+kv.map(x=>'<div><span class="label">'+x[0]+'</span><b>'+esc(x[1])+'</b></div>').join('')+'</div></div>';
   const script=(c.scenes||[]).filter(s=>s.body.trim()).map(s=>s.heading.toUpperCase()+'\n'+s.body).join('\n\n');
   if(script)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Script</h3></div><pre class="script-ex">'+esc(script.length>900?script.slice(0,900)+'…':script)+'</pre></div>';
@@ -1088,7 +1129,7 @@ function updateSaved(){const el=$('#ed-saved');if(!el||!draft)return;el.classNam
 function accSelect(p){
   const st=settings();
   return '<select class="inp" data-pf="accountId" data-pid="'+esc(p.id)+'" id="pa-'+esc(p.id)+'" aria-label="Compte"><option value="">Choisir un compte…</option>'+
-    st.platforms.map(pl=>{const as=accounts().filter(a=>a.platform===pl.id);return as.length?'<optgroup label="'+esc(pl.label)+'">'+as.map(a=>'<option value="'+esc(a.id)+'"'+(a.id===p.accountId?' selected':'')+'>'+esc(a.handle)+(a.nature?' ('+(a.nature==='pro'?'pro':'perso')+')':'')+'</option>').join('')+'</optgroup>':'';}).join('')+
+    st.platforms.map(pl=>{const as=accounts().filter(a=>a.platform===pl.id);return as.length?'<optgroup label="'+esc(pl.label)+(pl.channel!=='social'?' · '+esc(chanOf(pl.channel).label):'')+'">'+as.map(a=>'<option value="'+esc(a.id)+'"'+(a.id===p.accountId?' selected':'')+'>'+esc(a.handle)+(a.nature?' ('+(a.nature==='pro'?'pro':'perso')+')':'')+'</option>').join('')+'</optgroup>':'';}).join('')+
     (p.accountId&&!S.accounts[p.accountId]?'<option value="'+esc(p.accountId)+'" selected>Compte supprimé</option>':'')+'</select>';
 }
 function renderEditor(){
@@ -1104,7 +1145,7 @@ function renderEditor(){
     '<label class="field"><span>Durée</span><input class="inp" id="ed-duration" data-f="duration" value="'+esc(c.duration)+'" placeholder="ex. 60 s, 12 min"></label></div>'+
     '<div class="field"><span>Thématiques</span><div class="theme-pick">'+S2.themes.map(t=>'<button type="button" data-act="ed-theme" data-t="'+esc(t.id)+'" aria-pressed="'+c.themes.includes(t.id)+'">'+esc(t.label)+'</button>').join('')+'</div></div>'+
     '<div class="field"><span>Statut</span><div class="status-pick">'+STATUSES.map(s=>'<button type="button" data-act="ed-status" data-s="'+s.id+'" style="--c:'+s.c+'" aria-pressed="'+(c.status===s.id)+'"><span class="dot" style="--c:'+s.c+'"></span>'+s.label+'</button>').join('')+'</div></div></div>';
-  h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Diffusion</h2><button class="btn small" data-act="ed-addpub">'+ICON.plus+'Ajouter une plateforme</button></div>';
+  h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Diffusion'+(distLabel(c)?' <span class="pill plain" style="vertical-align:middle">'+esc(distLabel(c))+'</span>':'')+'</h2><button class="btn small" data-act="ed-addpub">'+ICON.plus+'Ajouter une plateforme</button></div>';
   if(!accounts().length)h+='<p class="hint" style="margin:0">Aucun compte enregistré. <button class="btn ghost small" data-act="ed-goto-networks">Ajouter tes comptes</button></p>';
   h+=c.publications.length?c.publications.map(p=>'<div class="pub'+(p.done?' isdone':'')+'"><div class="pub-acc">'+accSelect(p)+'</div>'+
       '<input class="inp" type="date" id="pd-'+esc(p.id)+'" data-pf="date" data-pid="'+esc(p.id)+'" value="'+esc(p.date)+'" aria-label="Date de publication">'+
@@ -1113,10 +1154,16 @@ function renderEditor(){
       '<button class="icon-btn" data-act="ed-delpub" data-pid="'+esc(p.id)+'" aria-label="Retirer cette diffusion">'+ICON.x+'</button></div>').join('')
     :'<p class="hint" style="margin:0">Pas encore planifié. Ajoute une plateforme pour choisir le compte et la date. Un même contenu peut partir sur plusieurs comptes à des dates différentes.</p>';
   h+='</div>';
+  h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Tournages</h2><button class="btn small" data-act="ed-addshoot">'+ICON.plus+'Ajouter un tournage</button></div>'+
+    (c.shoots.length?c.shoots.map((s,i)=>'<div class="shoot"><label class="field sh-start"><span>'+(c.shoots.length>1?'Session '+(i+1)+' · du':'Du')+'</span><input class="inp" type="date" id="ss-'+esc(s.id)+'" data-shf="start" data-shid="'+esc(s.id)+'" value="'+esc(s.start)+'"></label>'+
+      '<label class="field sh-end"><span>Au (si plusieurs jours)</span><input class="inp" type="date" id="se-'+esc(s.id)+'" data-shf="end" data-shid="'+esc(s.id)+'" value="'+esc(s.end)+'" min="'+esc(s.start)+'"></label>'+
+      '<label class="field sh-loc"><span>Lieu</span><input class="inp" id="sl-'+esc(s.id)+'" data-shf="location" data-shid="'+esc(s.id)+'" value="'+esc(s.location)+'" placeholder="ex. Analakely"></label>'+
+      '<button class="icon-btn sh-x" data-act="ed-delshoot" data-shid="'+esc(s.id)+'" data-confirm="✓" aria-label="Supprimer ce tournage">'+ICON.x+'</button>'+
+      '<label class="field sh-note"><span>Note</span><input class="inp" id="sn-'+esc(s.id)+'" data-shf="note" data-shid="'+esc(s.id)+'" value="'+esc(s.note)+'" placeholder="Scènes tournées, équipe, horaires…"></label>'+
+      '<span class="hint sh-sum" id="sum-'+esc(s.id)+'">'+esc(fmtShoot(s))+'</span></div>').join('')
+     :'<p class="hint" style="margin:0">Aucun tournage prévu. Ajoute une session d\'un jour, ou de plusieurs jours avec « Au ». Tu peux en ajouter autant que nécessaire, chacune avec son lieu.</p>')+'</div>';
   h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Production</h2></div><div class="f-grid">'+
-    '<label class="field"><span>Date de tournage</span><input class="inp" type="date" id="ed-shoot" data-f="shootDate" value="'+esc(c.shootDate)+'"></label>'+
     '<label class="field"><span>Date de montage</span><input class="inp" type="date" id="ed-edit" data-f="editDate" value="'+esc(c.editDate)+'"></label>'+
-    '<label class="field"><span>Lieu de tournage</span><input class="inp" id="ed-loc" data-f="location" value="'+esc(c.location)+'" placeholder="ex. Analakely"></label>'+
     '<label class="field wide"><span>Acteurs / participants</span><input class="inp" id="ed-cast" data-f="cast" value="'+esc(c.cast)+'" placeholder="Noms séparés par des virgules"></label>'+
     '<label class="field wide"><span>Matériel nécessaire</span><textarea class="inp" id="ed-gear" data-f="gear" rows="2" placeholder="Caméra, micro-cravate, perche, costume…">'+esc(c.gear)+'</textarea></label></div></div>';
   h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Script</h2><button class="btn small" data-act="ed-addscene">'+ICON.plus+'Scène</button></div>'+
@@ -1143,12 +1190,15 @@ $('#sheet-panel').addEventListener('input',e=>{
     scheduleSave();}
   else if(el.dataset.pf&&el.dataset.pf!=='done'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p[el.dataset.pf]=el.value;scheduleSave();}}
   else if(el.dataset.sf){const s=draft.scenes.find(x=>x.id===el.dataset.sid);if(s){s[el.dataset.sf]=el.value;scheduleSave();}}
+  else if(el.dataset.shf){const s=draft.shoots.find(x=>x.id===el.dataset.shid);if(s){s[el.dataset.shf]=el.value;
+    if(el.dataset.shf==='start'){const en=document.getElementById('se-'+s.id);if(en)en.min=el.value;}
+    const sm=document.getElementById('sum-'+s.id);if(sm)sm.textContent=fmtShoot(s);scheduleSave();}}
 });
 $('#sheet-panel').addEventListener('change',e=>{
   if(!draft)return;const el=e.target;
   if(el.dataset.pf==='done'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p.done=el.checked;syncStatusFromPubs(draft);scheduleSave();renderEditor();}}
   else if(el.dataset.f==='type'){draft.type=el.value;scheduleSave();}
-  else if(el.dataset.pf==='accountId'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p.accountId=el.value;scheduleSave();}}
+  else if(el.dataset.pf==='accountId'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p.accountId=el.value;scheduleSave();renderEditor();}}
 });
 $('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeEditor();});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(draft)closeEditor();else if(peekId)closePeek();});
@@ -1175,8 +1225,8 @@ document.addEventListener('click',e=>{
     case 'mark-done':e.stopPropagation();markDone(id,el.dataset.pid,true);break;
     case 'home-sel':S.ui.homeSel=el.dataset.sel;saveUI();render();{const p=$('#home-detail');if(p&&window.innerWidth<900)p.scrollIntoView({behavior:'smooth',block:'start'});}break;
     case 'goto-cal':go('calendar',{calMode:'month',cursor:today(),selDay:today()});break;
-    case 'filter-account':S.ui.filters={platform:'',account:id,nature:'',type:'',theme:'',status:''};go('calendar',{calMode:'list'});break;
-    case 'reset-filters':S.ui.filters={platform:'',account:'',nature:'',type:'',theme:'',status:''};saveUI();render();break;
+    case 'filter-account':S.ui.filters={channel:'',platform:'',account:id,nature:'',type:'',theme:'',status:''};go('calendar',{calMode:'list'});break;
+    case 'reset-filters':S.ui.filters={channel:'',platform:'',account:'',nature:'',type:'',theme:'',status:''};saveUI();render();break;
     case 'cal-prev':case 'cal-next':{const dir=a==='cal-next'?1:-1;const u=S.ui;
       if(u.calMode==='week'){u.cursor=addDays(u.cursor,7*dir);u.selDay=weekStart(u.cursor);}
       else{const d=pd(u.cursor);const n=new Date(d.getFullYear(),d.getMonth()+dir,1);u.cursor=ds(n);const t=today();u.selDay=(pd(t).getMonth()===n.getMonth()&&pd(t).getFullYear()===n.getFullYear())?t:ds(n);}
@@ -1189,6 +1239,8 @@ document.addEventListener('click',e=>{
     case 'acc-nature':{const acc=S.accounts[id];if(acc&&acc.nature!==el.dataset.n)updateAccount(id,{nature:el.dataset.n},'Nature → '+(el.dataset.n==='pro'?'Pro':'Perso'));break;}
     case 'type-del':{const used=contents().filter(c=>c.type===id).length;if(used){toast(plural(used,'contenu')+' utilise'+(used>1?'nt':'')+' ce format. Change-les d\'abord.');render();break;}
       const lbl=typeOf(id).label;updateSettings(s=>{s.types=s.types.filter(t=>t.id!==id);},'Format « '+lbl+' » supprimé');break;}
+    case 'chan-del':{if(settings().platforms.some(p=>p.channel===id)){toast('Déplace d\'abord les plateformes de ce type.');render();break;}
+      const lbl=chanOf(id).label;updateSettings(s=>{s.channels=s.channels.filter(c=>c.id!==id);},'Distribution « '+lbl+' » supprimée');break;}
     case 'theme-del':{const lbl=(themeOf(id)||{}).label||'';updateSettings(s=>{s.themes=s.themes.filter(t=>t.id!==id);},'Thématique « '+lbl+' » supprimée');break;}
     case 'plat-del':{if(accounts().some(x=>x.platform===id)){toast('Supprime d\'abord les comptes de cette plateforme.');render();break;}
       const lbl=platOf(id).label;updateSettings(s=>{s.platforms=s.platforms.filter(p=>p.id!==id);},'Plateforme « '+lbl+' » supprimée');break;}
@@ -1213,8 +1265,11 @@ document.addEventListener('click',e=>{
     case 'ed-status':draft.status=el.dataset.s;if(draft.status==='publie')draft.publications.forEach(p=>{p.done=true;});scheduleSave();renderEditor();break;
     case 'ed-theme':{const t=el.dataset.t;draft.themes=draft.themes.includes(t)?draft.themes.filter(x=>x!==t):draft.themes.concat([t]);scheduleSave();renderEditor();break;}
     case 'ed-addpub':{const last=draft.publications[draft.publications.length-1];const f=S.ui.filters;
-      draft.publications.push({id:uid(),accountId:f.account||'',date:last?last.date:(draft.shootDate||today()),time:last?last.time:'',done:false});
+      draft.publications.push({id:uid(),accountId:f.account||'',date:last?last.date:today(),time:last?last.time:'',done:false});
       if(draft.status==='idee')draft.status='ecriture';scheduleSave();renderEditor();break;}
+    case 'ed-addshoot':{const last=draft.shoots[draft.shoots.length-1];const st=last&&isValidDate(last.start)?addDays(shootEnd(last),1):today();
+      draft.shoots.push({id:'s'+uid(),start:st,end:'',location:last?last.location:'',note:''});scheduleSave();renderEditor();break;}
+    case 'ed-delshoot':draft.shoots=draft.shoots.filter(s=>s.id!==el.dataset.shid);scheduleSave();renderEditor();break;
     case 'ed-delpub':draft.publications=draft.publications.filter(p=>p.id!==el.dataset.pid);scheduleSave();renderEditor();break;
     case 'ed-addscene':draft.scenes.push({id:uid(),heading:'Scène '+(draft.scenes.length+1),body:''});scheduleSave();renderEditor();
       {const s=draft.scenes[draft.scenes.length-1];const t=document.getElementById('sb-'+s.id);if(t)t.focus();}break;
@@ -1237,9 +1292,11 @@ document.addEventListener('change',e=>{
   if(el.dataset.filter){S.ui.filters[el.dataset.filter]=el.value;saveUI();render();}
   else if(el.dataset.actChange==='toggle-prod'){S.ui.showProd=el.checked;saveUI();render();}
   else if(el.id==='qi-type'){S.ui.ideaType=el.value;saveUI();}
-  else if(el.dataset.accHandle){const a=S.accounts[el.dataset.accHandle];const v=normHandle(el.value);if(a&&v&&v!==a.handle)updateAccount(a.id,{handle:v},'Nom : '+a.handle+' → '+v);else render();}
+  else if(el.dataset.accHandle){const a=S.accounts[el.dataset.accHandle];const v=normHandle(el.value,a&&a.platform);if(a&&v&&v!==a.handle)updateAccount(a.id,{handle:v},'Nom : '+a.handle+' → '+v);else render();}
   else if(el.dataset.typeLabel||el.dataset.typeColor){const tid=el.dataset.typeLabel||el.dataset.typeColor;const v=el.value.trim();if(el.dataset.typeLabel&&!v)return render();
     updateSettings(s=>{const t=s.types.find(x=>x.id===tid);if(t){if(el.dataset.typeLabel)t.label=v;else t.color=el.value;}},el.dataset.typeLabel?'Format renommé : '+v:'Couleur du format '+typeOf(tid).label);}
+  else if(el.dataset.platChannel){const pid=el.dataset.platChannel;const v=el.value;updateSettings(s=>{const p=s.platforms.find(x=>x.id===pid);if(p)p.channel=v;},platOf(pid).label+' → '+chanOf(v).label);}
+  else if(el.dataset.chanLabel){const cid=el.dataset.chanLabel;const v=el.value.trim();if(!v)return render();updateSettings(s=>{const c=s.channels.find(x=>x.id===cid);if(c)c.label=v;},'Distribution renommée : '+v);}
   else if(el.dataset.themeLabel){const tid=el.dataset.themeLabel;const v=el.value.trim();if(!v)return render();
     updateSettings(s=>{const t=s.themes.find(x=>x.id===tid);if(t)t.label=v;},'Thématique renommée : '+v);}
   else if(el.dataset.platLabel||el.dataset.platColor){const pid=el.dataset.platLabel||el.dataset.platColor;const v=el.value.trim();if(el.dataset.platLabel&&!v)return render();
@@ -1256,7 +1313,11 @@ document.addEventListener('submit',e=>{
   else if(k==='type'){const v=$('#type-new').value.trim();if(!v)return;const pal=['#E4572E','#7B2CBF','#0F7B6C','#2E86AB','#D81E5B','#5465FF','#2B9348','#B5651D'];
     updateSettings(s=>{s.types.push({id:'t'+uid(),label:v,color:pal[s.types.length%pal.length]});},'Format ajouté : '+v);$('#type-new').value='';toast('Format « '+v+' » ajouté');}
   else if(k==='theme'){const v=$('#theme-new').value.trim();if(!v)return;updateSettings(s=>{s.themes.push({id:'th'+uid(),label:v});},'Thématique ajoutée : '+v);$('#theme-new').value='';toast('Thématique « '+v+' » ajoutée');}
-  else if(k==='plat'){const v=$('#plat-new').value.trim();if(!v)return;const col=$('#plat-new-color').value;updateSettings(s=>{s.platforms.push({id:'p'+uid(),label:v,color:col});},'Plateforme ajoutée : '+v);$('#plat-new').value='';toast('Plateforme « '+v+' » ajoutée');}
+  else if(k==='plat'){const v=$('#plat-new').value.trim();if(!v)return;const col=$('#plat-new-color').value;const ch=$('#plat-new-ch').value;const pid='p'+uid();
+    updateSettings(s=>{s.platforms.push({id:pid,label:v,color:col,channel:ch});},'Plateforme ajoutée : '+v+' ('+chanOf(ch).label+')');$('#plat-new').value='';
+    if(ch==='tv'||ch==='cinema'){const a={id:uid(),platform:pid,handle:v,nature:'pro',createdAt:Date.now()};Store.saveAccount(a);}
+    toast('« '+v+' » ajouté dans '+chanOf(ch).label);}
+  else if(k==='chan'){const v=$('#chan-new').value.trim();if(!v)return;updateSettings(s=>{s.channels.push({id:'ch'+uid(),label:v});},'Distribution ajoutée : '+v);$('#chan-new').value='';toast('« '+v+' » ajouté');}
   else if(k==='gist'){const tok=$('#gist-token').value.trim();const gid=$('#gist-idin').value.trim();if(!tok){toast('Colle ton jeton GitHub.');return;}
     toast('Connexion à GitHub…');if(gid)Sync.connect(tok,gid).then(render);else Sync.create(tok).then(render);}
 });
