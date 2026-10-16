@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Studio Tefi · version 2.1 · 16 octobre 2026 -->
+<!-- Studio Tefi · version 2.2 · 16 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -272,7 +272,7 @@ tbody tr:hover td{background:var(--surface-2)}
 .status-pick button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px;font-size:13.5px;font-weight:500}
 .status-pick button[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
 .status-pick button[aria-pressed="true"] .dot{background:#fff}
-.pub{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 104px auto auto;grid-template-areas:'acc date time done x';gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px}
+.pub{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) 104px auto auto;grid-template-areas:'acc date time done x';gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px}
 .pub.isdone{opacity:.7}
 .pub-done{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;cursor:pointer}
 .pub-done input{accent-color:var(--ok);width:17px;height:17px}
@@ -360,6 +360,9 @@ tbody tr:hover td{background:var(--surface-2)}
 @media (max-width:620px){.shoot{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'start end' 'loc loc' 'note note' 'sum x'}.sh-x{justify-self:end}}
 .chan{display:flex;flex-direction:column;gap:12px}
 .chan-h{display:flex;align-items:baseline;gap:10px;padding-top:6px}
+.pub-acc{display:flex;gap:8px}
+.pub-acc select:first-child{flex:0 0 40%;min-width:0}
+.pub-acc select:last-child{flex:1;min-width:0}
 </style>
 
 
@@ -389,8 +392,14 @@ tbody tr:hover td{background:var(--surface-2)}
 (function(){
 "use strict";
 /* ================= Constantes ================= */
-const APP_VERSION='2.1';
+const APP_VERSION='2.2';
 const VERSIONS=[
+  {v:'2.2',date:'2026-10-16',items:[
+    "Chaque diffusion se choisit en deux temps : d'abord la distribution (réseaux, TV, cinéma…), puis le compte, la chaîne ou la salle",
+    "Une diffusion peut rester « à préciser » (ex. Cinéma, salle pas encore choisie)",
+    "Ajout de compte : choix de la distribution avant la plateforme",
+    "Synchro GitHub : récupération automatique toutes les minutes quand l'appli est ouverte"
+  ]},
   {v:'2.1',date:'2026-10-16',items:[
     "Plusieurs tournages par contenu, chacun d'un jour ou sur plusieurs jours (du… au…), avec son lieu et une note",
     'Nouvelle étape « En production » entre Écriture et Tournage',
@@ -501,7 +510,9 @@ const themeOf=id=>settings().themes.find(t=>t.id===id);
 const platOf=id=>settings().platforms.find(p=>p.id===id)||{id:'',label:'Plateforme ?',color:'#8A8FA3',channel:'social'};
 const chanOf=id=>settings().channels.find(c=>c.id===id)||{id:id||'',label:'Autre'};
 const isSocial=pid=>(platOf(pid).channel||'social')==='social';
-function distOf(c){const out=[];(c.publications||[]).forEach(p=>{const a=S.accounts[p.accountId];if(!a)return;const ch=platOf(a.platform).channel||'social';if(!out.includes(ch))out.push(ch);});return out;}
+function pubChannel(p){const a=S.accounts[p.accountId];return a?(platOf(a.platform).channel||'social'):(p.channel||'');}
+function distOf(c){const out=[];(c.publications||[]).forEach(p=>{const ch=pubChannel(p);if(ch&&!out.includes(ch))out.push(ch);});return out;}
+const pendingLabel=p=>p&&p.channel?chanOf(p.channel).label+' · à préciser':'Compte à choisir';
 function distLabel(c){const d=distOf(c);if(!d.length)return '';if(d.length===1&&d[0]==='social')return 'Uniquement réseaux';return d.map(id=>chanOf(id).label).join(' + ');}
 const distPill=c=>{const l=distLabel(c);return l?'<span class="pill plain" title="Distribution">'+esc(l)+'</span>':'';};
 const shootEnd=s=>isValidDate(s.end)&&s.end>=s.start?s.end:s.start;
@@ -596,7 +607,8 @@ const Sync={
   cfg:null,state:'off',pushT:null,dirty:false,lastAt:0,applying:false,
   label(){return this.state==='pushing'?'Envoi vers GitHub…':this.state==='pulling'?'Récupération depuis GitHub…':this.state==='error'?'Synchro GitHub en erreur':this.lastAt?'Synchronisé avec GitHub à '+pad(new Date(this.lastAt).getHours())+':'+pad(new Date(this.lastAt).getMinutes()):'Synchro GitHub active';},
   init(){this.cfg=lsGet(LS_GIST);if(this.cfg&&this.cfg.token&&this.cfg.gistId){this.pull();}
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&this.cfg&&this.cfg.gistId&&!this.dirty)this.pull();});},
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&this.cfg&&this.cfg.gistId&&!this.dirty)this.pull();});
+    setInterval(()=>{if(document.visibilityState==='visible'&&this.cfg&&this.cfg.gistId&&!this.dirty&&!draft&&this.state!=='pushing')this.pull();},60000);},
   headers(){return {'Authorization':'Bearer '+this.cfg.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'};},
   payload(){return JSON.stringify({app:'studio-tefi',version:1,savedAt:new Date().toISOString(),settings:S.settings,accounts:Object.values(S.accounts),contents:Object.values(S.contents),history:S.history.slice(0,100)});},
   set(state){this.state=state;renderSync();if(S.ui.view==='settings')scheduleRender();},
@@ -634,13 +646,13 @@ const Sync={
 
 /* ================= Filtres & événements ================= */
 function filtersActive(){const f=S.ui.filters;return Object.keys(f).some(k=>f[k]);}
-function passAcc(a){const f=S.ui.filters;
-  if(f.channel&&(!a||(platOf(a.platform).channel||'social')!==f.channel))return false;
+function passAcc(a,p){const f=S.ui.filters;
+  if(f.channel&&(a?(platOf(a.platform).channel||'social'):(p&&p.channel))!==f.channel)return false;
   if(f.account&&(!a||a.id!==f.account))return false;if(f.platform&&(!a||a.platform!==f.platform))return false;
   if(f.nature&&(!a||(a.nature||'')!==f.nature))return false;return true;}
 function passContent(c){const f=S.ui.filters;if(f.type&&c.type!==f.type)return false;if(f.status&&c.status!==f.status)return false;
   if(f.theme&&!(c.themes||[]).includes(f.theme))return false;
-  if(f.channel||f.account||f.platform||f.nature)return (c.publications||[]).some(p=>passAcc(S.accounts[p.accountId]));return true;}
+  if(f.channel||f.account||f.platform||f.nature)return (c.publications||[]).some(p=>passAcc(S.accounts[p.accountId],p));return true;}
 function events(opt){
   opt=Object.assign({filtered:true,prod:S.ui.showProd},opt||{});
   const out=[];
@@ -648,7 +660,7 @@ function events(opt){
     if(opt.filtered&&!passContent(c))continue;
     for(const p of (c.publications||[])){
       if(!isValidDate(p.date))continue;const a=S.accounts[p.accountId];
-      if(opt.filtered&&!passAcc(a))continue;
+      if(opt.filtered&&!passAcc(a,p))continue;
       out.push({kind:'pub',date:p.date,time:p.time||'',c,p,a});
     }
     if(opt.prod){
@@ -679,7 +691,7 @@ function rowActions(c,p){
 function evRow(e,opts){
   opts=opts||{};const c=e.c;const t=typeOf(c.type);const late=isLate(e);
   let kindTag;
-  if(e.kind==='pub')kindTag='<span class="pill" style="--c:'+accColor(e.a)+'"><span class="dot" style="--c:'+accColor(e.a)+'"></span>'+esc(e.a?platOf(e.a.platform).label+' · '+e.a.handle:'Compte à choisir')+'</span>';
+  if(e.kind==='pub')kindTag='<span class="pill" style="--c:'+accColor(e.a)+'"><span class="dot" style="--c:'+accColor(e.a)+'"></span>'+esc(e.a?platOf(e.a.platform).label+' · '+e.a.handle:pendingLabel(e.p))+'</span>';
   else if(e.kind==='shoot')kindTag='<span class="pill" style="--c:#E0533D">Tournage'+(e.dn>1?' · jour '+(e.di+1)+'/'+e.dn:'')+'</span>'+(e.s.location?'<span>📍 '+esc(e.s.location)+'</span>':'');
   else kindTag='<span class="pill plain">Montage</span>';
   const when=opts.showDate?'<div class="when'+(late?' late':'')+'"><b>'+pd(e.date).getDate()+'</b><span class="mono muted">'+MSHORT[pd(e.date).getMonth()]+'</span></div>':'';
@@ -711,9 +723,12 @@ function filterBar(extra){
 }
 
 /* ================= Formulaire d'ajout de compte ================= */
+function platOptions(ch){return settings().platforms.filter(p=>p.channel===ch).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.label)+'</option>').join('');}
 function accQuickForm(idp){
   const st=settings();
-  return '<form class="quick-acc" data-form="acc"><select class="inp" id="'+idp+'-plat" data-k="plat" aria-label="Plateforme">'+st.channels.map(ch=>{const ps=st.platforms.filter(p=>p.channel===ch.id);return ps.length?'<optgroup label="'+esc(ch.label)+'">'+ps.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.label)+'</option>').join('')+'</optgroup>':'';}).join('')+'</select>'+
+  const chs=st.channels.filter(ch=>st.platforms.some(p=>p.channel===ch.id));const ch0=chs[0]?chs[0].id:'social';
+  return '<form class="quick-acc" data-form="acc"><select class="inp" id="'+idp+'-chan" data-k="chan" aria-label="Distribution">'+chs.map(ch=>'<option value="'+esc(ch.id)+'">'+esc(ch.label)+'</option>').join('')+'</select>'+
+    '<select class="inp" id="'+idp+'-plat" data-k="plat" aria-label="Plateforme">'+platOptions(ch0)+'</select>'+
     '<input class="inp" id="'+idp+'-handle" data-k="handle" placeholder="@compte, chaîne ou salle" autocomplete="off" autocapitalize="off" aria-label="Nom du compte">'+
     '<select class="inp" id="'+idp+'-nat" data-k="nat" aria-label="Nature du compte">'+NATURES.map(n=>'<option value="'+n.id+'">'+n.label+'</option>').join('')+'</select>'+
     '<button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form>';
@@ -1079,7 +1094,7 @@ function renderPeek(){
   h+='<label class="field"><span>Statut</span><select class="inp" id="pk-status" data-pk="status" style="max-width:220px">'+STATUSES.map(s=>'<option value="'+s.id+'"'+(s.id===c.status?' selected':'')+'>'+s.label+'</option>').join('')+'</select></label>';
   h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Diffusion</h3><span class="mono muted">'+c.publications.length+'</span></div>';
   h+=c.publications.length?c.publications.map(p=>{const a=S.accounts[p.accountId];const late=!p.done&&isValidDate(p.date)&&p.date<today();
-    return '<div class="ppub'+(late?' late':'')+'"><div class="acc"><span class="dot" style="--c:'+accColor(a)+'"></span><span class="h">'+(a?esc(platOf(a.platform).label)+' · '+esc(a.handle):'Compte à choisir')+'</span>'+natBadge(a)+'</div>'+
+    return '<div class="ppub'+(late?' late':'')+'"><div class="acc"><span class="dot" style="--c:'+accColor(a)+'"></span><span class="h">'+(a?esc(platOf(a.platform).label)+' · '+esc(a.handle):esc(pendingLabel(p)))+'</span>'+natBadge(a)+'</div>'+
       '<input class="inp" type="date" id="pk-d-'+esc(p.id)+'" data-ppf="date" data-pid="'+esc(p.id)+'" value="'+esc(p.date)+'" aria-label="Date">'+
       '<input class="inp" type="time" id="pk-t-'+esc(p.id)+'" data-ppf="time" data-pid="'+esc(p.id)+'" value="'+esc(p.time)+'" aria-label="Heure">'+
       '<label class="pub-done"><input type="checkbox" id="pk-c-'+esc(p.id)+'" data-ppf="done" data-pid="'+esc(p.id)+'"'+(p.done?' checked':'')+'>Publié</label>'+
@@ -1126,10 +1141,15 @@ function closeEditor(){flushSave();commitEditorLog();draft=null;editorOrig=null;
 function scheduleSave(){pending=true;updateSaved();clearTimeout(saveT);saveT=setTimeout(flushSave,650);}
 function flushSave(){clearTimeout(saveT);if(!draft||!pending)return;pending=false;if(isBlank(draft)&&!S.contents[draft.id]){updateSaved();return;}Store.saveContent(draft);updateSaved();}
 function updateSaved(){const el=$('#ed-saved');if(!el||!draft)return;el.className='saved'+(pending?' pending':'');el.innerHTML='<i></i>'+(pending?'Modification…':(S.contents[draft.id]?'Enregistré':'Brouillon'));}
+function chanSelect(p){
+  const st=settings();const ch=pubChannel(p);
+  return '<select class="inp" data-pf="channel" data-pid="'+esc(p.id)+'" id="pch-'+esc(p.id)+'" aria-label="Distribution">'+st.channels.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===ch?' selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>';
+}
 function accSelect(p){
-  const st=settings();
-  return '<select class="inp" data-pf="accountId" data-pid="'+esc(p.id)+'" id="pa-'+esc(p.id)+'" aria-label="Compte"><option value="">Choisir un compte…</option>'+
-    st.platforms.map(pl=>{const as=accounts().filter(a=>a.platform===pl.id);return as.length?'<optgroup label="'+esc(pl.label)+(pl.channel!=='social'?' · '+esc(chanOf(pl.channel).label):'')+'">'+as.map(a=>'<option value="'+esc(a.id)+'"'+(a.id===p.accountId?' selected':'')+'>'+esc(a.handle)+(a.nature?' ('+(a.nature==='pro'?'pro':'perso')+')':'')+'</option>').join('')+'</optgroup>':'';}).join('')+
+  const st=settings();const ch=pubChannel(p)||'social';const social=ch==='social';
+  const pls=st.platforms.filter(pl=>pl.channel===ch);
+  const groups=pls.map(pl=>{const as=accounts().filter(a=>a.platform===pl.id);return as.length?'<optgroup label="'+esc(pl.label)+'">'+as.map(a=>'<option value="'+esc(a.id)+'"'+(a.id===p.accountId?' selected':'')+'>'+esc(a.handle)+(a.nature?' ('+(a.nature==='pro'?'pro':'perso')+')':'')+'</option>').join('')+'</optgroup>':'';}).join('');
+  return '<select class="inp" data-pf="accountId" data-pid="'+esc(p.id)+'" id="pa-'+esc(p.id)+'" aria-label="Compte"><option value="">'+(groups?(social?'Choisir un compte…':'À préciser'):'Rien dans '+esc(chanOf(ch).label)+' · ajoute-le dans Réseaux')+'</option>'+groups+
     (p.accountId&&!S.accounts[p.accountId]?'<option value="'+esc(p.accountId)+'" selected>Compte supprimé</option>':'')+'</select>';
 }
 function renderEditor(){
@@ -1145,9 +1165,9 @@ function renderEditor(){
     '<label class="field"><span>Durée</span><input class="inp" id="ed-duration" data-f="duration" value="'+esc(c.duration)+'" placeholder="ex. 60 s, 12 min"></label></div>'+
     '<div class="field"><span>Thématiques</span><div class="theme-pick">'+S2.themes.map(t=>'<button type="button" data-act="ed-theme" data-t="'+esc(t.id)+'" aria-pressed="'+c.themes.includes(t.id)+'">'+esc(t.label)+'</button>').join('')+'</div></div>'+
     '<div class="field"><span>Statut</span><div class="status-pick">'+STATUSES.map(s=>'<button type="button" data-act="ed-status" data-s="'+s.id+'" style="--c:'+s.c+'" aria-pressed="'+(c.status===s.id)+'"><span class="dot" style="--c:'+s.c+'"></span>'+s.label+'</button>').join('')+'</div></div></div>';
-  h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Diffusion'+(distLabel(c)?' <span class="pill plain" style="vertical-align:middle">'+esc(distLabel(c))+'</span>':'')+'</h2><button class="btn small" data-act="ed-addpub">'+ICON.plus+'Ajouter une plateforme</button></div>';
+  h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Diffusion'+(distLabel(c)?' <span class="pill plain" style="vertical-align:middle">'+esc(distLabel(c))+'</span>':'')+'</h2><button class="btn small" data-act="ed-addpub">'+ICON.plus+'Ajouter une diffusion</button></div>';
   if(!accounts().length)h+='<p class="hint" style="margin:0">Aucun compte enregistré. <button class="btn ghost small" data-act="ed-goto-networks">Ajouter tes comptes</button></p>';
-  h+=c.publications.length?c.publications.map(p=>'<div class="pub'+(p.done?' isdone':'')+'"><div class="pub-acc">'+accSelect(p)+'</div>'+
+  h+=c.publications.length?c.publications.map(p=>'<div class="pub'+(p.done?' isdone':'')+'"><div class="pub-acc">'+chanSelect(p)+accSelect(p)+'</div>'+
       '<input class="inp" type="date" id="pd-'+esc(p.id)+'" data-pf="date" data-pid="'+esc(p.id)+'" value="'+esc(p.date)+'" aria-label="Date de publication">'+
       '<input class="inp" type="time" id="pt-'+esc(p.id)+'" data-pf="time" data-pid="'+esc(p.id)+'" value="'+esc(p.time)+'" aria-label="Heure">'+
       '<label class="pub-done"><input type="checkbox" id="pc-'+esc(p.id)+'" data-pf="done" data-pid="'+esc(p.id)+'"'+(p.done?' checked':'')+'>Publié</label>'+
@@ -1188,7 +1208,7 @@ $('#sheet-panel').addEventListener('input',e=>{
   if(el.dataset.f){draft[el.dataset.f]=el.value;
     if(el.dataset.f==='hashtags'){const n=$('#ed-tagcount');if(n)n.textContent='· '+((el.value.match(/#[^\s#]+/g)||[]).length);}
     scheduleSave();}
-  else if(el.dataset.pf&&el.dataset.pf!=='done'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p[el.dataset.pf]=el.value;scheduleSave();}}
+  else if(el.dataset.pf&&el.dataset.pf!=='done'&&el.dataset.pf!=='channel'&&el.dataset.pf!=='accountId'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p[el.dataset.pf]=el.value;scheduleSave();}}
   else if(el.dataset.sf){const s=draft.scenes.find(x=>x.id===el.dataset.sid);if(s){s[el.dataset.sf]=el.value;scheduleSave();}}
   else if(el.dataset.shf){const s=draft.shoots.find(x=>x.id===el.dataset.shid);if(s){s[el.dataset.shf]=el.value;
     if(el.dataset.shf==='start'){const en=document.getElementById('se-'+s.id);if(en)en.min=el.value;}
@@ -1198,7 +1218,8 @@ $('#sheet-panel').addEventListener('change',e=>{
   if(!draft)return;const el=e.target;
   if(el.dataset.pf==='done'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p.done=el.checked;syncStatusFromPubs(draft);scheduleSave();renderEditor();}}
   else if(el.dataset.f==='type'){draft.type=el.value;scheduleSave();}
-  else if(el.dataset.pf==='accountId'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p.accountId=el.value;scheduleSave();renderEditor();}}
+  else if(el.dataset.pf==='accountId'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p.accountId=el.value;const a=S.accounts[el.value];if(a)p.channel=platOf(a.platform).channel||'social';scheduleSave();renderEditor();}}
+  else if(el.dataset.pf==='channel'){const p=draft.publications.find(x=>x.id===el.dataset.pid);if(p){p.channel=el.value;const a=S.accounts[p.accountId];if(a&&(platOf(a.platform).channel||'social')!==el.value)p.accountId='';scheduleSave();renderEditor();}}
 });
 $('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeEditor();});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(draft)closeEditor();else if(peekId)closePeek();});
@@ -1265,7 +1286,7 @@ document.addEventListener('click',e=>{
     case 'ed-status':draft.status=el.dataset.s;if(draft.status==='publie')draft.publications.forEach(p=>{p.done=true;});scheduleSave();renderEditor();break;
     case 'ed-theme':{const t=el.dataset.t;draft.themes=draft.themes.includes(t)?draft.themes.filter(x=>x!==t):draft.themes.concat([t]);scheduleSave();renderEditor();break;}
     case 'ed-addpub':{const last=draft.publications[draft.publications.length-1];const f=S.ui.filters;
-      draft.publications.push({id:uid(),accountId:f.account||'',date:last?last.date:today(),time:last?last.time:'',done:false});
+      draft.publications.push({id:uid(),channel:last?(pubChannel(last)||'social'):(f.channel||'social'),accountId:f.account||'',date:last?last.date:today(),time:last?last.time:'',done:false});
       if(draft.status==='idee')draft.status='ecriture';scheduleSave();renderEditor();break;}
     case 'ed-addshoot':{const last=draft.shoots[draft.shoots.length-1];const st=last&&isValidDate(last.start)?addDays(shootEnd(last),1):today();
       draft.shoots.push({id:'s'+uid(),start:st,end:'',location:last?last.location:'',note:''});scheduleSave();renderEditor();break;}
@@ -1289,6 +1310,7 @@ function copyText(txt,ok,fallbackEl){
 /* Champs de la vue principale */
 document.addEventListener('change',e=>{
   const el=e.target;if(!$('#main').contains(el))return;
+  if(el.dataset.k==='chan'){const f=el.closest('form');const ps=f&&f.querySelector('[data-k="plat"]');if(ps)ps.innerHTML=platOptions(el.value);return;}
   if(el.dataset.filter){S.ui.filters[el.dataset.filter]=el.value;saveUI();render();}
   else if(el.dataset.actChange==='toggle-prod'){S.ui.showProd=el.checked;saveUI();render();}
   else if(el.id==='qi-type'){S.ui.ideaType=el.value;saveUI();}
