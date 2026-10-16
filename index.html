@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Studio Tefi · version 5.1 · 16 octobre 2026 -->
+<!-- Studio Tefi · version 5.1.1 · 16 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -618,8 +618,9 @@ window.STUDIO_SUPA={url:'https://yqtzbwgjilyemvbtgbzg.supabase.co',key:'sb_publi
 (function(){
 "use strict";
 /* ================= Constantes ================= */
-const APP_VERSION='5.1';
+const APP_VERSION='5.1.1';
 const VERSIONS=[
+  {v:'5.1.1',date:'2026-10-16',items:['Correction : le devis ou la facture se ferme de nouveau avec la croix et s\'enregistre correctement (admin et assistante)','Les champs chiffrés à 0 se sélectionnent au clic : plus de « 010 » dans la remise ou la TVA']},
   {v:'5.1',date:'2026-10-16',items:['Menu latéral réductible : icônes seules ou menu complet, mémorisé sur chaque appareil','Couleurs de l\'interface : 8 assemblages + couleur perso, choisis par l\'admin pour sa vue et pour celle de l\'assistante','Entreprises et clients en liste compacte : la fiche complète s\'ouvre avec « Modifier »','Réseaux : résumé de chaque compte et style de contenu (thématiques + ton), comptes suggérés dans la fiche d\'un contenu','Version GitHub : page d\'accueil avec « Se connecter » et « Pas de compte ? Inscris-toi »','Version GitHub : un compte différent par onglet pour tester, déconnexion limitée à l\'appareil']},
   {v:'5.0',date:'2026-10-16',items:['Version GitHub : vrais comptes en ligne (Supabase) avec e-mail et mot de passe, pour toi et ton assistante','Sécurité côté serveur : les autorisations de l\'assistante sont vérifiées par la base, plus seulement par l\'écran','Mise à jour en direct sur tous les appareils, et changements gardés en attente hors connexion','Photos rangées dans un espace de stockage privé','Réglages → Comptes : valider ou couper l\'accès d\'un compte','Reprise en un clic des données et photos de l\'ancienne version']},
   {v:'4.0',date:'2026-10-16',items:[
@@ -1674,7 +1675,7 @@ function openDoc(id,preset){
 }
 function closeDoc(save){if(save!==false&&docDraft)saveDoc(true);docDraft=null;docOrig=null;$('#docsheet').hidden=true;if(!draft&&!peekId)document.body.classList.remove('locked');}
 function saveDoc(silent){
-  const d=clone(docDraft);if(!d)return null;
+  let d=clone(docDraft);if(!d)return null;
   const isNew=!S.docs[d.id];const blank=!d.lines.some(l=>l.label.trim()||+l.price)&&!d.companyId&&!d.subject;
   if(isNew&&blank)return null;
   if(d.status==='brouillon'||!d.profileSnap){const p=profOf(d.profileId);d.profileSnap=partySnap(p?Object.assign({},p,{label:p.name}):null);}
@@ -3628,6 +3629,7 @@ window.addEventListener('storage',e=>{
   if(e.key===LS_DATA&&S.mode==='local'&&e.newValue){try{applyLocal(JSON.parse(e.newValue));scheduleRender();}catch(x){}}
   if(e.key===LS_GIST){Sync.cfg=lsGet(LS_GIST);renderSync();}
 });
+document.addEventListener('focusin',e=>{const t=e.target;if(t&&t.tagName==='INPUT'&&t.type==='number'&&(t.value==='0'||t.value===''))setTimeout(()=>{try{t.select();}catch(x){}},0);});
 applyNavMini();
 startStore();
 })();
