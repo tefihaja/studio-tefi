@@ -39,8 +39,9 @@ function touch(){DV++;}
 function memo(key,fn){const e=MEMO.get(key);if(e&&e.dv===DV)return e.v;const v=fn();if(MEMO.size>300)MEMO.clear();MEMO.set(key,{dv:DV,v});return v;}
 let renderHidden=false;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&renderHidden){renderHidden=false;scheduleRender();}});
-const APP_VERSION='6.0';
+const APP_VERSION='6.0.1';
 const VERSIONS=[
+{v:'6.0.1',date:'2026-10-16',items:['Correction (comptes en ligne) : les actions de l\'assistante ne sont plus refusées à cause de l\'historique']},
 {v:'6.0',date:'2026-10-16',items:['Optimisation complète : l\'écran ne met à jour que ce qui change, les calculs sont mémorisés, rien ne tourne quand l\'onglet est caché (jusqu\'à 10× plus rapide avec beaucoup de données)','Données plus légères : l\'historique ne garde que ce qui a changé, logos rangés dans l\'espace de stockage, sauvegardes groupées','Version GitHub découpée en fichiers gardés en mémoire par le navigateur','Résumés différents pour l\'admin et l\'assistante, personnalisables (ordre et blocs affichés) : À traiter, rendez-vous du mois, projets du mois, le mois en chiffres, point de la semaine','Priorités des rendez-vous (Facultatif → Impératif) : calendrier, filtre, rappels plus tôt pour les impératifs','Plans de travail de l\'assistante : tâches Urgent → Facultatif, étapes, répétitions, rappels, modèles, tâches privées et tâches automatiques ; visibles chez l\'admin seulement quand elle le décide','Demandes à Tefi : signature, statut de facture, rushs, publication, dépense, question ; fil de discussion, « Relancer Tefi » après 24 h, fermeture automatique','Cloche « À traiter » avec notifications, et bouton « Traiter » qui t\'emmène au bon endroit','Signature dessinée ou importée, cachet par entreprise, « Demander la signature » et « Signer » : PDF signé figé, signature retirée si le document change']},
 {v:'5.1.1',date:'2026-10-16',items:['Correction : le devis ou la facture se ferme de nouveau avec la croix et s\'enregistre correctement (admin et assistante)','Les champs chiffrés à 0 se sélectionnent au clic : plus de « 010 » dans la remise ou la TVA']},
 {v:'5.1',date:'2026-10-16',items:['Menu latéral réductible : icônes seules ou menu complet, mémorisé sur chaque appareil','Couleurs de l\'interface : 8 assemblages + couleur perso, choisis par l\'admin pour sa vue et pour celle de l\'assistante','Entreprises et clients en liste compacte : la fiche complète s\'ouvre avec « Modifier »','Réseaux : résumé de chaque compte et style de contenu (thématiques + ton), comptes suggérés dans la fiche d\'un contenu','Version GitHub : page d\'accueil avec « Se connecter » et « Pas de compte ? Inscris-toi »','Version GitHub : un compte différent par onglet pour tester, déconnexion limitée à l\'appareil']},
@@ -2289,7 +2290,7 @@ const hist=list.filter(o=>o.col==='history').map(o=>({col:'history',id:o.id,data
 const st=list.find(o=>o.settings);
 if(st){const r=await this.sb.from('app_settings').upsert({id:'main',data:st.settings},{onConflict:'id'});if(r.error)throw r.error;}
 for(let i=0;i<items.length;i+=400){const r=await this.sb.from('items').upsert(items.slice(i,i+400),{onConflict:'col,id'});if(r.error)throw r.error;}
-if(hist.length){const r=await this.sb.from('items').upsert(hist,{onConflict:'col,id',ignoreDuplicates:true});if(r.error)throw r.error;}
+if(hist.length){let r=await this.sb.from('items').insert(hist);if(r.error&&r.error.code==='23505'){for(const h of hist){r=await this.sb.from('items').insert(h);if(r.error&&r.error.code!=='23505')throw r.error;}}else if(r.error)throw r.error;}
 },
 async flush(){
 if(!this.sb||!ROLE||this.busy)return;const keys=Object.keys(this.out);if(!keys.length)return;
@@ -2302,7 +2303,7 @@ if(isNetErr(e)){this.setState('offline');this.retryT=setTimeout(()=>this.flush()
 else{
 let refused=0,msg=errMsg(e);
 for(const k of keys){try{await this.send([snap[k]]);done(k);}catch(e2){if(isNetErr(e2)){this.setState('offline');break;}refused++;msg=errMsg(e2);done(k);}}
-if(refused){toast('Refusé par la sécurité du compte : '+msg);this.refresh();}
+if(refused){toast(/row-level security/.test(msg)?'Refusé par la sécurité du compte. Si ça continue, relance le script supabase-setup.sql dans Supabase.':'Refusé par la sécurité du compte : '+msg);this.refresh();}
 if(this.state!=='offline')this.setState('ok');
 }
 }
