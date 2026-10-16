@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Studio Tefi · version 3.2 · 16 octobre 2026 -->
+<!-- Studio Tefi · version 3.3 · 16 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -467,8 +467,13 @@ details.fold summary{cursor:pointer;font-family:var(--f-display);font-weight:700
 (function(){
 "use strict";
 /* ================= Constantes ================= */
-const APP_VERSION='3.2';
+const APP_VERSION='3.3';
 const VERSIONS=[
+  {v:'3.3',date:'2026-10-16',items:[
+    "Chaque onglet garde sa propre vue : actualiser ne fait plus passer d'admin à assistante (ou l'inverse)",
+    "La vue admin n'est plus retenue par défaut : un nouvel onglet redemande le code PIN, sauf si tu coches « Garder la vue admin 30 jours »",
+    "Deux onglets ouverts sur le même appareil se mettent à jour entre eux automatiquement"
+  ]},
   {v:'3.2',date:'2026-10-16',items:[
     "« Boîtes » devient « Clients », avec une fiche complète : contact, téléphone, e-mail, NIF, STAT, RCS, adresse, pays",
     "Autorisations de l'assistante : interrupteurs dans Réglages pour chaque fonction",
@@ -1192,7 +1197,12 @@ function viewSettings(){
 }
 
 /* ================= Vues : admin / assistante ================= */
-let ROLE=lsGet(LS_ROLE)||'';if(ROLE!=='admin'&&ROLE!=='assistant')ROLE='';
+const SS_ROLE='studio-tefi-role-tab';
+function ssGet(k){try{return sessionStorage.getItem(k);}catch(e){return null;}}
+function ssSet(k,v){try{if(v)sessionStorage.setItem(k,v);else sessionStorage.removeItem(k);}catch(e){}}
+let ROLE=ssGet(SS_ROLE)||'';
+if(!ROLE){const rem=lsGet(LS_ROLE);if(rem==='assistant')ROLE='assistant';else if(rem&&rem.role==='admin'&&rem.until>Date.now())ROLE='admin';}
+if(ROLE!=='admin'&&ROLE!=='assistant')ROLE='';
 let gateStep='choose';
 const isAdmin=()=>ROLE==='admin';
 function roleName(r){return r==='assistant'?(settings().assistantName||'Assistante'):'Admin';}
@@ -1200,7 +1210,7 @@ const ADMIN_ACTS_OLD=['del-content','restore','type-del','theme-del','plat-del',
 async function hashPin(pin){const txt='studio-tefi:'+pin;
   try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');}
   catch(e){let h=5381;for(const ch of txt)h=((h<<5)+h+ch.charCodeAt(0))|0;return 'w'+(h>>>0).toString(16);}}
-function setRole(r){ROLE=r;lsSet(LS_ROLE,r);gateStep='choose';if(r!=='admin'&&S.ui.view==='settings')S.ui.view='home';render();window.scrollTo(0,0);if(r)toast(r==='admin'?'Vue admin ouverte':'Vue '+roleName('assistant')+' ouverte');}
+function setRole(r,remember){ROLE=r;ssSet(SS_ROLE,r);if(r==='assistant')lsSet(LS_ROLE,'assistant');else if(r==='admin')lsSet(LS_ROLE,remember?{role:'admin',until:Date.now()+30*864e5}:null);gateStep='choose';if(r!=='admin'&&S.ui.view==='settings')S.ui.view='home';render();window.scrollTo(0,0);if(r)toast(r==='admin'?'Vue admin ouverte':'Vue '+roleName('assistant')+' ouverte');}
 function viewGate(){
   let h='<div class="gate"><div class="gate-brand"><div class="brand-mark">T</div><div><h1>Studio Tefi</h1><span class="muted">Qui utilise l\'appli sur cet appareil ?</span></div></div>';
   if(gateStep==='choose'){
@@ -1212,6 +1222,7 @@ function viewGate(){
       '<p class="muted" style="margin:0">'+(has?'Entre ton code pour ouvrir la vue admin.':'Choisis un code d\'au moins 4 chiffres. Il sera demandé à chaque passage en vue admin, sur tous tes appareils synchronisés.')+'</p>'+
       '<input class="inp pin" id="gate-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" aria-label="Code PIN">'+
       (has?'':'<input class="inp pin" id="gate-pin2" type="password" inputmode="numeric" autocomplete="off" placeholder="Confirmer" aria-label="Confirmer le code PIN">')+
+      '<label class="toggle"><input type="checkbox" id="gate-remember">Garder la vue admin 30 jours sur cet appareil (seulement s\'il est à toi)</label>'+
       '<div class="card-b"><button type="button" class="btn ghost" data-act="gate-back">Retour</button><button class="btn primary" type="submit">Ouvrir la vue admin</button></div></form>';
   }
   if(S.mode==='local'&&!(Sync.cfg&&Sync.cfg.gistId))h+='<p class="hint">Nouvel appareil ? Choisis ta vue, puis ouvre « Plus » (ou le bas du menu) → Synchronisation pour retrouver le planning.</p>';
@@ -1303,7 +1314,7 @@ function handleV3Click(a,el,e){
     case 'gate-admin':gateStep='pin';render();return true;
     case 'gate-assistant':setRole('assistant');return true;
     case 'gate-back':gateStep='choose';render();return true;
-    case 'switch-role':if(draft)closeEditor();if(peekId)closePeek();closeIdea();closeRdv();ROLE='';lsSet(LS_ROLE,'');gateStep='choose';render();window.scrollTo(0,0);return true;
+    case 'switch-role':if(draft)closeEditor();if(peekId)closePeek();closeIdea();closeRdv();ROLE='';ssSet(SS_ROLE,'');lsSet(LS_ROLE,null);gateStep='choose';render();window.scrollTo(0,0);return true;
     case 'idea-new':openIdea(null);return true;
     case 'idea-open':e.stopPropagation();openIdea(id);return true;
     case 'idea-close':closeIdea();return true;
@@ -1335,9 +1346,9 @@ function handleV3Submit(k,f){
   if(k==='gate-pin'){(async()=>{
       const v=($('#gate-pin').value||'').trim();const has=!!settings().pinHash;
       if(!/^\d{4,}$/.test(v)){toast('Le code doit contenir au moins 4 chiffres.');return;}
-      if(has){if(await hashPin(v)===settings().pinHash)setRole('admin');else{toast('Code incorrect.');$('#gate-pin').value='';$('#gate-pin').focus();}}
+      if(has){const rem=!!($('#gate-remember')&&$('#gate-remember').checked);if(await hashPin(v)===settings().pinHash)setRole('admin',rem);else{toast('Code incorrect.');$('#gate-pin').value='';$('#gate-pin').focus();}}
       else{const v2=($('#gate-pin2').value||'').trim();if(v!==v2){toast('Les deux codes ne correspondent pas.');return;}
-        const hsh=await hashPin(v);ROLE='admin';updateSettings(s=>{s.pinHash=hsh;},'Code PIN admin créé');setRole('admin');}
+        const rem=!!($('#gate-remember')&&$('#gate-remember').checked);const hsh=await hashPin(v);ROLE='admin';updateSettings(s=>{s.pinHash=hsh;},'Code PIN admin créé');setRole('admin',rem);}
     })();return true;}
   if(k==='pin'){if(!isAdmin())return true;(async()=>{const v=($('#pin-new').value||'').trim();if(!/^\d{4,}$/.test(v)){toast('Le code doit contenir au moins 4 chiffres.');return;}
       const hsh=await hashPin(v);updateSettings(s=>{s.pinHash=hsh;},'Code PIN admin modifié');$('#pin-new').value='';toast('Nouveau code PIN enregistré');})();return true;}
@@ -2235,6 +2246,10 @@ document.addEventListener('dragover',e=>{const t=dropTarget(e);if(!t)return;e.pr
 document.addEventListener('drop',e=>{const t=dropTarget(e);if(!t)return;e.preventDefault();const spec=dragSpec;dragSpec=null;t.classList.remove('drop');
   if(spec.startsWith('ev:'))moveEvent(spec.slice(3),t.dataset.drop);else setStatus(spec.slice(5),t.dataset.dropStatus);});
 
+window.addEventListener('storage',e=>{
+  if(e.key===LS_DATA&&S.mode==='local'&&e.newValue){try{applyLocal(JSON.parse(e.newValue));scheduleRender();}catch(x){}}
+  if(e.key===LS_GIST){Sync.cfg=lsGet(LS_GIST);renderSync();}
+});
 startStore();
 })();
 </script>
