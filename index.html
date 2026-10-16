@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Studio Tefi · version 3.1 · 16 octobre 2026 -->
+<!-- Studio Tefi · version 3.2 · 16 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -424,6 +424,14 @@ details.fold summary{cursor:pointer;font-family:var(--f-display);font-weight:700
 .totals>div b{font-family:var(--f-mono);font-size:14px}
 .totals .grand{background:var(--accent);color:var(--accent-fg);border-radius:8px;padding:9px 12px;font-weight:700}
 .totals .grand b{font-size:16px}
+.perm-group{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--line)}
+.perm-group:first-of-type{border-top:0}
+.perm{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 2px;cursor:pointer}
+.switch{appearance:none;-webkit-appearance:none;width:40px;height:23px;border-radius:12px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch:checked{background:var(--ok)}
+.switch:checked::after{transform:translateX(17px)}
+@media (prefers-reduced-motion:reduce){.switch,.switch::after{transition:none}}
 </style>
 
 
@@ -440,13 +448,13 @@ details.fold summary{cursor:pointer;font-family:var(--f-display);font-weight:700
     <button class="nav-btn nav-desk" data-nav="networks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>Réseaux<span class="count" id="cnt-acc"></span></button>
     <button class="nav-btn nav-desk admin-only" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Réglages</button>
     <button class="nav-btn nav-mob" data-nav="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>Plus</button>
-    <button class="nav-btn nav-new" data-act="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nouveau contenu</button>
+    <button class="nav-btn nav-new need-projEdit" data-act="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nouveau contenu</button>
     <button class="nav-btn nav-desk nav-role" data-act="switch-role" id="role-btn"></button>
     <div class="sync" id="sync"><i></i><span>Connexion…</span></div>
   </nav>
   <main id="main"><div class="loading">Chargement de ton planning…</div></main>
 </div>
-<button class="fab" data-act="new" aria-label="Nouveau contenu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+<button class="fab need-projEdit" data-act="new" aria-label="Nouveau contenu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
 <div class="peek" id="idea" hidden><div class="peek-panel" id="idea-panel" role="dialog" aria-modal="true" aria-label="Idée"></div></div>
 <div class="peek" id="rdvm" hidden><div class="peek-panel" id="rdv-panel" role="dialog" aria-modal="true" aria-label="Rendez-vous"></div></div>
 <div class="sheet" id="docsheet" hidden><div class="sheet-panel" id="doc-panel" role="dialog" aria-modal="true" aria-label="Devis ou facture"></div></div>
@@ -459,8 +467,14 @@ details.fold summary{cursor:pointer;font-family:var(--f-display);font-weight:700
 (function(){
 "use strict";
 /* ================= Constantes ================= */
-const APP_VERSION='3.1';
+const APP_VERSION='3.2';
 const VERSIONS=[
+  {v:'3.2',date:'2026-10-16',items:[
+    "« Boîtes » devient « Clients », avec une fiche complète : contact, téléphone, e-mail, NIF, STAT, RCS, adresse, pays",
+    "Autorisations de l'assistante : interrupteurs dans Réglages pour chaque fonction",
+    "L'assistante peut faire devis, factures et PDF, voit l'argent à réclamer (sans le chiffre d'affaires) et « Les entreprises » en lecture seule",
+    "Ses changements de statut (payée, annulée, accepté, refusé) attendent ta validation dans « À valider »"
+  ]},
   {v:'3.1',date:'2026-10-16',items:[
     "Facturation dans Business : profils de tes entreprises (nom, téléphone, mail, NIF, STAT, RCS, adresse, pays, logo, coordonnées de paiement)",
     'Devis et factures : prestations, quantités, remise, TVA, devise (Ariary, euro, dollar), numérotation automatique, montant en toutes lettres',
@@ -763,7 +777,7 @@ function events(opt){
       if(isValidDate(c.editDate))out.push({kind:'edit',date:c.editDate,time:'',c});
     }
   }
-  if(opt.rdv!==false&&(opt.rdv||S.ui.showRdv)&&!(opt.filtered&&filtersActive())){
+  if(opt.rdv!==false&&(opt.rdv||S.ui.showRdv)&&!(opt.filtered&&filtersActive())&&can('rdv')){
     Object.values(S.rdv).forEach(x=>{if(isValidDate(x.date))out.push({kind:'rdv',date:x.date,time:x.start||'',r:x});});
   }
   out.sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:(x.time||'99')<(y.time||'99')?-1:1);
@@ -783,9 +797,9 @@ function evChip(e){
 }
 function themePills(c){return (c.themes||[]).map(id=>themeOf(id)).filter(Boolean).map(t=>'<span class="pill plain">'+esc(t.label)+'</span>').join('');}
 function rowActions(c,p){
-  return '<div class="row-acts">'+(p&&!p.done?'<button class="icon-btn sm" data-act="mark-done" data-id="'+esc(c.id)+'" data-pid="'+esc(p.id)+'" title="Marquer publié" aria-label="Marquer publié">'+ICON.check+'</button>':'')+
-    '<button class="icon-btn sm" data-act="open" data-id="'+esc(c.id)+'" title="Modifier" aria-label="Modifier">'+ICON.edit+'</button>'+
-    (isAdmin()?'<button class="icon-btn sm danger" data-act="del-content" data-id="'+esc(c.id)+'" data-confirm="Supprimer ?" title="Supprimer le contenu" aria-label="Supprimer le contenu">'+ICON.trash+'</button>':'')+'</div>';
+  return '<div class="row-acts">'+(p&&!p.done?'<button class="icon-btn sm need-projStatus" data-act="mark-done" data-id="'+esc(c.id)+'" data-pid="'+esc(p.id)+'" title="Marquer publié" aria-label="Marquer publié">'+ICON.check+'</button>':'')+
+    '<button class="icon-btn sm need-projEdit" data-act="open" data-id="'+esc(c.id)+'" title="Modifier" aria-label="Modifier">'+ICON.edit+'</button>'+
+    (can('projDelete')?'<button class="icon-btn sm danger" data-act="del-content" data-id="'+esc(c.id)+'" data-confirm="Supprimer ?" title="Supprimer le contenu" aria-label="Supprimer le contenu">'+ICON.trash+'</button>':'')+'</div>';
 }
 function evRow(e,opts){
   if(e.kind==='rdv')return rdvRow(e.r,opts);
@@ -827,7 +841,7 @@ function platOptions(ch){return settings().platforms.filter(p=>p.channel===ch).m
 function accQuickForm(idp){
   const st=settings();
   const chs=st.channels.filter(ch=>st.platforms.some(p=>p.channel===ch.id));const ch0=chs[0]?chs[0].id:'social';
-  return '<form class="quick-acc" data-form="acc"><select class="inp" id="'+idp+'-chan" data-k="chan" aria-label="Distribution">'+chs.map(ch=>'<option value="'+esc(ch.id)+'">'+esc(ch.label)+'</option>').join('')+'</select>'+
+  return '<form class="quick-acc need-accounts" data-form="acc"><select class="inp" id="'+idp+'-chan" data-k="chan" aria-label="Distribution">'+chs.map(ch=>'<option value="'+esc(ch.id)+'">'+esc(ch.label)+'</option>').join('')+'</select>'+
     '<select class="inp" id="'+idp+'-plat" data-k="plat" aria-label="Plateforme">'+platOptions(ch0)+'</select>'+
     '<input class="inp" id="'+idp+'-handle" data-k="handle" placeholder="@compte, chaîne ou salle" autocomplete="off" autocapitalize="off" aria-label="Nom du compte">'+
     '<select class="inp" id="'+idp+'-nat" data-k="nat" aria-label="Nature du compte">'+NATURES.map(n=>'<option value="'+n.id+'">'+n.label+'</option>').join('')+'</select>'+
@@ -1146,6 +1160,7 @@ function viewSettings(){
     '<label class="field"><span>Prénom de l\'assistante</span><input class="inp" id="asst-name" value="'+esc(st.assistantName)+'" placeholder="Assistante" data-asst-name="1"></label>'+
     '<form class="field" data-form="pin" style="grid-column:span 2"><span>Changer le code PIN admin</span><div class="link-line"><input class="inp pin" id="pin-new" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••" aria-label="Nouveau code PIN"><button class="btn" type="submit">Enregistrer</button></div></form></div>'+
     '<p class="hint" style="margin:10px 0 0">La vue assistante ne peut pas supprimer de projet, valider des idées, toucher aux plateformes, aux formats, aux boîtes ni à ces réglages. Le code PIN protège l\'interface, pas les données : partage ton jeton GitHub seulement avec une personne de confiance.</p></section>';
+  h+=permsPanel();
   // Synchro & sauvegarde
   h+='<section class="panel"><div class="panel-h"><h2>Synchronisation &amp; sauvegarde</h2></div>';
   if(S.mode==='cloud'){
@@ -1181,7 +1196,7 @@ let ROLE=lsGet(LS_ROLE)||'';if(ROLE!=='admin'&&ROLE!=='assistant')ROLE='';
 let gateStep='choose';
 const isAdmin=()=>ROLE==='admin';
 function roleName(r){return r==='assistant'?(settings().assistantName||'Assistante'):'Admin';}
-const ADMIN_ACTS=['del-content','restore','type-del','theme-del','plat-del','chan-del','idea-validate','idea-review','idea-promote','comp-del','export','import'];
+const ADMIN_ACTS_OLD=['del-content','restore','type-del','theme-del','plat-del','chan-del','idea-validate','idea-review','idea-promote','comp-del','export','import'];
 async function hashPin(pin){const txt='studio-tefi:'+pin;
   try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');}
   catch(e){let h=5381;for(const ch of txt)h=((h<<5)+h+ch.charCodeAt(0))|0;return 'w'+(h>>>0).toString(16);}}
@@ -1216,6 +1231,7 @@ function viewMore(){
   h+='<div class="more-list"><button class="btn" data-nav="networks">Réseaux &amp; distribution</button>'+(isAdmin()?'<button class="btn" data-nav="settings">Réglages, historique et versions</button>':'')+
     '<button class="btn" data-act="switch-role">Changer de vue · actuellement '+esc(roleName(ROLE))+'</button></div>';
   h+='<section class="panel"><div class="panel-h"><h2>Synchronisation</h2></div>'+syncBox()+'</section>';
+  if(!isAdmin()&&can('history'))h+=historyPanel();
   return h+'</div>';
 }
 
@@ -1246,36 +1262,6 @@ function rdvRow(x,opts){opts=opts||{};const col=rdvColor(x);
     (x.start?'<span class="rdv-time">'+esc(x.start)+(x.end?'–'+esc(x.end):'')+'</span>':'')+(x.location?'<span>📍 '+esc(x.location)+'</span>':'')+(x.contact?'<span>avec '+esc(x.contact)+'</span>':'')+(opts.showRel?'<span>'+rel(x.date)+'</span>':'')+'</span></button>'+
     '<div class="row-acts"><button class="icon-btn sm" data-act="rdv-open" data-id="'+esc(x.id)+'" aria-label="Modifier">'+ICON.edit+'</button><button class="icon-btn sm danger" data-act="rdv-del" data-id="'+esc(x.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer le rendez-vous">'+ICON.trash+'</button></div></div>';}
 function rdvPass(x){const f=S.ui.rdvFilter;if(!f)return true;if(f==='perso')return x.kind==='perso';if(f==='pro')return x.kind!=='perso';return x.kind!=='perso'&&x.companyId===f;}
-function viewBusiness(){
-  const u=S.ui;const t=today();const all=Object.values(S.rdv).filter(x=>isValidDate(x.date)).sort((a,b)=>(a.date+(a.start||'99'))<(b.date+(b.start||'99'))?-1:1);
-  let h='<div class="wrap"><div class="head"><div><span class="label">Business</span><h1>Business</h1><p class="muted">Tes rendez-vous pro et perso, et les boîtes avec qui tu travailles. Les rendez-vous apparaissent aussi dans le calendrier.</p></div>'+(BILL_TABS.includes(u.bizTab)?'':'<button class="btn primary" data-act="rdv-new">'+ICON.plus+'Nouveau rendez-vous</button>')+'</div>';
-  h+='<div class="seg" role="group" aria-label="Section">'+[['rdv','Rendez-vous'],['comp','Boîtes']].concat(isAdmin()?[['fac','Factures'],['dev','Devis'],['presta','Prestations'],['prof','Mes entreprises']]:[]).map(m=>'<button data-act="biz-tab" data-tab="'+m[0]+'" aria-pressed="'+(u.bizTab===m[0])+'">'+m[1]+'</button>').join('')+'</div>';
-  if(BILL_TABS.includes(u.bizTab)&&!isAdmin())u.bizTab='rdv';
-  if(BILL_TABS.includes(u.bizTab)){h+=billingTab(u.bizTab);}
-  else if(u.bizTab!=='comp'){
-    h+='<div class="filters"><select class="inp'+(u.rdvFilter?' on':'')+'" id="rdv-filter" data-rdv-filter="1" aria-label="Filtrer les rendez-vous"><option value="">Tous les rendez-vous</option><option value="pro"'+(u.rdvFilter==='pro'?' selected':'')+'>Pro (toutes les boîtes)</option><option value="perso"'+(u.rdvFilter==='perso'?' selected':'')+'>Perso</option>'+
-      companies().map(c=>'<option value="'+esc(c.id)+'"'+(u.rdvFilter===c.id?' selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>'+
-      '<span class="legend" style="margin:0"><span><span class="dot" style="--c:'+settings().persoColor+'"></span>Perso</span>'+companies().map(c=>'<span><span class="dot" style="--c:'+c.color+'"></span>'+esc(c.label)+'</span>').join('')+'</span></div>';
-    const up=all.filter(x=>x.date>=t&&rdvPass(x));const past=all.filter(x=>x.date<t&&rdvPass(x)).reverse().slice(0,60);
-    const bd={};up.forEach(x=>{(bd[x.date]=bd[x.date]||[]).push(x);});
-    h+=up.length?'<div class="agenda">'+Object.keys(bd).map(day=>'<div class="agenda-day"><div class="agenda-date"><b>'+pd(day).getDate()+'</b><span class="label">'+DAYS[dow(day)]+' · '+MSHORT[pd(day).getMonth()]+'</span></div><div class="panel" style="padding:6px 14px"><div class="rows">'+bd[day].map(x=>rdvRow(x,{showRel:true})).join('')+'</div></div></div>').join('')+'</div>'
-      :'<div class="empty"><b>Aucun rendez-vous à venir</b>Ajoute ton prochain rendez-vous, pro ou perso.<br><button class="btn primary" data-act="rdv-new">Nouveau rendez-vous</button></div>';
-    if(past.length)h+='<details class="fold" id="rdv-past"><summary>Rendez-vous passés ('+past.length+')</summary><div class="panel" style="padding:6px 14px;margin-top:10px"><div class="rows">'+past.map(x=>rdvRow(x,{showDate:true})).join('')+'</div></div></details>';
-  }else{
-    const admin=isAdmin();
-    h+='<div class="grid-2">'+companies().map(c=>{const mine=all.filter(x=>x.kind!=='perso'&&x.companyId===c.id);const next=mine.find(x=>x.date>=t);
-      return '<section class="panel comp-card"><div class="set-item"><input type="color" class="swatch" id="cc-'+esc(c.id)+'" value="'+esc(c.color)+'" data-comp-color="'+esc(c.id)+'" aria-label="Couleur"'+(admin?'':' disabled')+'>'+
-        '<input class="inp" id="cl-'+esc(c.id)+'" value="'+esc(c.label)+'" data-comp-label="'+esc(c.id)+'" aria-label="Nom de la boîte" style="font-weight:700"'+(admin?'':' disabled')+'>'+
-        (admin?'<button class="icon-btn danger" data-act="comp-del" data-id="'+esc(c.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(c.label)+'">'+ICON.trash+'</button>':'')+'</div>'+
-        '<div class="kvs"><div><span class="label">À venir</span><b>'+plural(mine.filter(x=>x.date>=t).length,'rendez-vous','rendez-vous')+'</b></div><div><span class="label">Prochain</span><b>'+(next?esc(fmtShort(next.date))+(next.start?' · '+esc(next.start):''):'—')+'</b></div><div><span class="label">Total</span><b>'+mine.length+'</b></div></div>'+
-        compBillingFields(c,admin)+(function(){const pj=contents().filter(x=>x.companyId===c.id).length;return pj?'<span class="hint">'+plural(pj,'projet lié','projets liés')+'</span>':'';})()+
-        '<div class="card-f"><button class="btn small" data-act="rdv-new" data-comp="'+esc(c.id)+'">'+ICON.plus+'Rendez-vous</button>'+(admin?'<button class="btn small" data-act="doc-new" data-kind="devis" data-comp="'+esc(c.id)+'">'+ICON.plus+'Devis</button><button class="btn small" data-act="doc-new" data-kind="facture" data-comp="'+esc(c.id)+'">'+ICON.plus+'Facture</button>':'')+'<button class="btn small ghost" data-act="comp-filter" data-id="'+esc(c.id)+'">Voir ses rendez-vous</button></div></section>';}).join('')+
-      '<section class="panel comp-card"><h3>Rendez-vous perso</h3><div class="set-item"><input type="color" class="swatch" id="perso-color" value="'+esc(settings().persoColor)+'" data-perso-color="1" aria-label="Couleur des rendez-vous perso"'+(admin?'':' disabled')+'><span class="muted">Couleur des rendez-vous perso dans le calendrier</span></div></section></div>';
-    if(!companies().length)h+='<div class="empty"><b>Aucune boîte pour l\'instant</b>'+(admin?'Ajoute les boîtes avec qui tu travailles : chacune aura sa couleur.':'L\'admin n\'a pas encore ajouté de boîte.')+'</div>';
-    if(admin)h+='<section class="panel"><h3>Ajouter une boîte</h3><form class="add-form" data-form="comp"><input class="inp" id="comp-new" placeholder="Nom de la boîte (ex. Studio Ivato)" autocomplete="off"><input type="color" class="swatch" id="comp-new-color" value="#3D5A80" aria-label="Couleur"><button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
-  }
-  return h+'</div>';
-}
 /* ----- Fenêtre d'un rendez-vous ----- */
 let rdvDraft=null;
 function openRdv(id,preset){preset=preset||{};
@@ -1286,7 +1272,7 @@ function renderRdv(){
   const x=rdvDraft;if(!x)return;const isNew=!S.rdv[x.id];const col=rdvColor(x);
   let h='<div class="peek-h"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="label"><span class="dot" style="--c:'+col+'"></span> '+(isNew?'Nouveau rendez-vous':'Rendez-vous')+'</span><input class="title-inp" style="font-size:22px" id="rf-title" data-rf="title" value="'+esc(x.title)+'" placeholder="Objet du rendez-vous" aria-label="Objet"></div><button class="icon-btn" data-act="rdv-close" aria-label="Fermer">'+ICON.x+'</button></div><div class="peek-b">';
   h+='<div class="seg kind-seg" role="group" aria-label="Type">'+[['pro','Pro'],['perso','Perso']].map(k=>'<button type="button" data-act="rdv-kind" data-k="'+k[0]+'" aria-pressed="'+(x.kind===k[0])+'">'+k[1]+'</button>').join('')+'</div>';
-  if(x.kind==='pro')h+='<label class="field"><span>Pour quelle boîte ?</span><select class="inp" id="rf-comp" data-rf="companyId"><option value="">Sans boîte précise</option>'+companies().map(c=>'<option value="'+esc(c.id)+'"'+(c.id===x.companyId?' selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>'+(companies().length?'':'<span class="hint">'+(isAdmin()?'Ajoute tes boîtes dans Business → Boîtes.':'L\'admin n\'a pas encore ajouté de boîte.')+'</span>')+'</label>';
+  if(x.kind==='pro')h+='<label class="field"><span>Pour quel client ?</span><select class="inp" id="rf-comp" data-rf="companyId"><option value="">Sans client précis</option>'+companies().map(c=>'<option value="'+esc(c.id)+'"'+(c.id===x.companyId?' selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>'+(companies().length?'':'<span class="hint">'+(isAdmin()?'Ajoute tes clients dans Business → Clients.':'Aucun client enregistré.')+'</span>')+'</label>';
   h+='<div class="f-grid"><label class="field"><span>Date</span><input class="inp" type="date" id="rf-date" data-rf="date" value="'+esc(x.date)+'"></label><label class="field"><span>Début</span><input class="inp" type="time" id="rf-start" data-rf="start" value="'+esc(x.start)+'"></label><label class="field"><span>Fin</span><input class="inp" type="time" id="rf-end" data-rf="end" value="'+esc(x.end)+'"></label></div>';
   h+='<div class="f-grid"><label class="field"><span>Lieu</span><input class="inp" id="rf-loc" data-rf="location" value="'+esc(x.location)+'" placeholder="Adresse ou « Visio »"></label><label class="field"><span>Avec qui</span><input class="inp" id="rf-contact" data-rf="contact" value="'+esc(x.contact)+'" placeholder="Nom, rôle"></label><label class="field"><span>Lien visio</span><input class="inp" id="rf-link" data-rf="link" value="'+esc(x.link)+'" placeholder="meet.google.com/…" inputmode="url" autocapitalize="off"></label></div>';
   if(x.link)h+='<a class="link-chip" href="'+esc(normUrl(x.link))+'" target="_blank" rel="noopener" style="align-self:flex-start">↗ Ouvrir le lien</a>';
@@ -1339,8 +1325,8 @@ function handleV3Click(a,el,e){
     case 'rdv-kind':rdvDraft.kind=el.dataset.k;renderRdv();return true;
     case 'biz-tab':S.ui.bizTab=el.dataset.tab;saveUI();render();return true;
     case 'comp-filter':S.ui.bizTab='rdv';S.ui.rdvFilter=id;saveUI();render();return true;
-    case 'comp-del':{if(Object.values(S.rdv).some(x=>x.companyId===id)){toast('Des rendez-vous utilisent cette boîte. Change-les d\'abord.');render();return true;}
-      const lbl=(compOf(id)||{}).label||'';updateSettings(s=>{s.companies=s.companies.filter(c=>c.id!==id);},'Boîte « '+lbl+' » supprimée');}return true;
+    case 'comp-del':{if(Object.values(S.rdv).some(x=>x.companyId===id)){toast('Des rendez-vous utilisent ce client. Change-les d\'abord.');render();return true;}
+      const lbl=(compOf(id)||{}).label||'';updateSettings(s=>{s.companies=s.companies.filter(c=>c.id!==id);},'Client « '+lbl+' » supprimé');}return true;
     case 'prep-pub':{const c=S.contents[id];if(c){const txt=[c.caption,c.hashtags].filter(Boolean).join('\n\n');if(txt&&navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast('Légende copiée : colle-la dans ta publication'),()=>{});}}return true;
   }
   return false;
@@ -1358,8 +1344,8 @@ function handleV3Submit(k,f){
   if(k==='review'){const id=f.dataset.id,kind=f.dataset.kind;const txt=($('#rv-'+id).value||'').trim();if(!txt){toast('Ajoute un mot d\'explication.');return true;}
     updateContent(id,c=>{c.ideaState=kind;c.review={comment:txt,at:Date.now(),by:'Admin'};},(kind==='refusee'?'Idée refusée : ':'À retravailler : ')+txt);
     reviewing=null;toast(kind==='refusee'?'Idée refusée':'Idée renvoyée à '+roleName('assistant'));return true;}
-  if(k==='comp'){if(!isAdmin())return true;const v=$('#comp-new').value.trim();if(!v)return true;const col=$('#comp-new-color').value;
-    updateSettings(s=>{s.companies=(s.companies||[]).concat([{id:'k'+uid(),label:v,color:col}]);},'Boîte ajoutée : '+v);$('#comp-new').value='';toast('Boîte « '+v+' » ajoutée');return true;}
+  if(k==='comp'){if(!can('clients'))return true;const v=$('#comp-new').value.trim();if(!v)return true;const col=$('#comp-new-color').value;
+    updateSettings(s=>{s.companies=(s.companies||[]).concat([{id:'k'+uid(),label:v,color:col,country:'Madagascar'}]);},'Client ajouté : '+v);$('#comp-new').value='';toast('Client « '+v+' » ajouté : complète sa fiche');return true;}
   return false;
 }
 
@@ -1434,45 +1420,6 @@ function amountWords(total,cur){const c=CURRENCIES[cur]||CURRENCIES.MGA;const en
 function sumBy(list,f){const m={};list.forEach(d=>{const c=d.currency||'MGA';m[c]=(m[c]||0)+f(d);});const ks=Object.keys(m).filter(k=>Math.abs(m[k])>0.0001);return ks.length?ks.map(k=>money(m[k],k)).join(' + '):money(0,'MGA');}
 
 /* ----- Listes ----- */
-function docRow(d){const st=docState(d);const t=docTotals(d);const cl=d.clientSnap&&d.clientSnap.name||(compOf(d.companyId)||{}).label||'Sans client';
-  return '<tr data-act="doc-open" data-id="'+esc(d.id)+'"><td class="mono"><b>'+esc(d.number)+'</b></td><td>'+esc(cl)+(d.subject?'<div class="hint">'+esc(d.subject)+'</div>':'')+'</td><td class="mono">'+fmtShort(d.date)+'</td><td class="mono">'+(isValidDate(d.dueDate)?fmtShort(d.dueDate):'—')+'</td><td class="mono" style="text-align:right;white-space:nowrap"><b>'+esc(money(t.total,d.currency))+'</b></td><td><span class="pill" style="--c:'+st[2]+'">'+st[1]+'</span></td>'+
-    '<td><div class="row-acts"><button class="btn small" data-act="doc-pdf" data-id="'+esc(d.id)+'" title="Exporter en PDF">PDF</button></div></td></tr>';}
-function billingTab(tab){
-  if(!isAdmin())return '<div class="empty"><b>Réservé à l\'admin</b>La facturation n\'est pas accessible dans la vue assistante.</div>';
-  if(tab==='prof')return viewProfiles();
-  if(tab==='presta')return viewPrestations();
-  if(!profiles().length)return '<div class="empty"><b>Commence par le profil de ton entreprise</b>Nom, téléphone, mail, NIF, STAT, RCS, adresse et pays : tu les remplis une fois, ils apparaissent ensuite sur tous tes devis et factures.<br><button class="btn primary" data-act="biz-tab" data-tab="prof">Créer mon profil d\'entreprise</button></div>';
-  const kind=tab==='dev'?'devis':'facture';const f=S.ui.docFilter||{};
-  let list=docs().filter(d=>d.kind===kind).sort((a,b)=>(b.date+b.number)>(a.date+a.number)?1:-1);
-  if(f.status)list=list.filter(d=>docState(d)[0]===f.status);if(f.profile)list=list.filter(d=>d.profileId===f.profile);if(f.client)list=list.filter(d=>d.companyId===f.client);
-  let h='';
-  if(kind==='facture'){
-    const all=docs().filter(d=>d.kind==='facture'&&d.status!=='annulee'&&d.status!=='brouillon');const t=today();const ms=t.slice(0,7);
-    const month=all.filter(d=>String(d.date).slice(0,7)===ms);const paidM=all.filter(d=>d.status==='payee'&&String(d.paidAt||d.date).slice(0,7)===ms);
-    const open=all.filter(d=>d.status==='envoyee');const late=open.filter(d=>docState(d)[0]==='retard');
-    h+='<div class="stats" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="stat"><span class="label">Facturé ce mois</span><strong style="font-size:20px">'+esc(sumBy(month,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(month.length,'facture')+'</span></div>'+
-      '<div class="stat"><span class="label">Encaissé ce mois</span><strong style="font-size:20px;color:var(--ok)">'+esc(sumBy(paidM,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(paidM.length,'facture')+' payée'+(paidM.length>1?'s':'')+'</span></div>'+
-      '<div class="stat"><span class="label">À encaisser</span><strong style="font-size:20px">'+esc(sumBy(open,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(open.length,'facture')+' envoyée'+(open.length>1?'s':'')+'</span></div>'+
-      '<div class="stat'+(late.length?' alert':'')+'"><span class="label">En retard</span><strong style="font-size:20px">'+esc(sumBy(late,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(late.length,'facture')+'</span></div></div>';
-  }
-  const opt=(v,l,sel)=>'<option value="'+esc(v)+'"'+(sel===v?' selected':'')+'>'+esc(l)+'</option>';
-  const sts=(DOC_STATUS[kind]).concat(kind==='facture'?[['retard','En retard']]:[]);
-  h+='<div class="cal-bar"><div class="filters">'+
-    '<select class="inp'+(f.status?' on':'')+'" id="df-status" data-docf="status" aria-label="Statut">'+opt('','Tous les statuts',f.status)+sts.map(s=>opt(s[0],s[1],f.status)).join('')+'</select>'+
-    (profiles().length>1?'<select class="inp'+(f.profile?' on':'')+'" id="df-profile" data-docf="profile" aria-label="Entreprise">'+opt('','Toutes mes entreprises',f.profile)+profiles().map(p=>opt(p.id,p.name,f.profile)).join('')+'</select>':'')+
-    '<select class="inp'+(f.client?' on':'')+'" id="df-client" data-docf="client" aria-label="Client">'+opt('','Tous les clients',f.client)+companies().map(c=>opt(c.id,c.label,f.client)).join('')+'</select></div>'+
-    '<button class="btn primary" data-act="doc-new" data-kind="'+kind+'">'+ICON.plus+(kind==='devis'?'Nouveau devis':'Nouvelle facture')+'</button></div>';
-  h+=list.length?'<div class="table-wrap"><table><thead><tr><th>N°</th><th>Client</th><th>Date</th><th>'+(kind==='devis'?'Validité':'Échéance')+'</th><th style="text-align:right">Montant</th><th>Statut</th><th></th></tr></thead><tbody>'+list.map(docRow).join('')+'</tbody></table></div>'
-    :'<div class="empty"><b>'+(kind==='devis'?'Aucun devis':'Aucune facture')+'</b>'+(Object.values(f).some(Boolean)?'Change les filtres.':'Crée ton premier '+(kind==='devis'?'devis':'document')+' : les prestations, la TVA et le total se calculent tout seuls.')+'</div>';
-  if(kind==='facture'){
-    const yr=today().slice(0,4);const inv=docs().filter(d=>d.kind==='facture'&&d.status!=='annulee'&&d.status!=='brouillon'&&String(d.date).startsWith(yr));
-    const per={};inv.forEach(d=>{const k=d.companyId||'_';(per[k]=per[k]||[]).push(d);});
-    const keys=Object.keys(per);
-    if(keys.length)h+='<section class="panel"><div class="panel-h"><h2>Revenus '+yr+' par client</h2></div><div>'+keys.map(k=>{const c=compOf(k);const L=per[k];
-      return '<div class="acc-row"><span class="acc-name"><span class="dot" style="--c:'+(c?c.color:'#8A8FA3')+'"></span><span>'+esc(c?c.label:'Sans client')+'</span></span><div class="kv"><b>'+esc(sumBy(L,d=>docTotals(d).total))+'</b>facturé</div><div class="kv"><b>'+esc(sumBy(L.filter(d=>d.status==='payee'),d=>docTotals(d).total))+'</b>encaissé</div></div>';}).join('')+'</div></section>';
-  }
-  return h;
-}
 const PROF_FIELDS=[['name','Nom de l\'entreprise *'],['activity','Activité'],['phone','Téléphone'],['email','E-mail'],['nif','NIF'],['stat','STAT'],['rcs','RCS'],['address','Adresse'],['country','Pays']];
 function viewProfiles(){
   let h='<p class="muted" style="margin:0">Les entreprises qui émettent tes devis et factures. Remplis-les une fois : leurs infos sont reprises automatiquement sur chaque document.</p>';
@@ -1495,22 +1442,6 @@ function viewProfiles(){
   h+='<section class="panel"><h3>'+(profiles().length?'Ajouter une autre entreprise':'Crée le profil de ton entreprise')+'</h3><form class="add-form" data-form="prof"><input class="inp" id="prof-new" placeholder="Nom de l\'entreprise" autocomplete="off"><button class="btn primary" type="submit">'+ICON.plus+'Créer le profil</button></form><p class="hint" style="margin:8px 0 0">Tu complètes ensuite le numéro, le mail, le NIF, le STAT, le RCS, l\'adresse et le pays.</p></section>';
   return h;
 }
-function viewPrestations(){
-  let h='<p class="muted" style="margin:0">Ton catalogue de prestations. Tu les ajoutes en un clic dans tes devis et factures, et tu peux toujours modifier le prix sur le document.</p>';
-  h+=prestations().length?'<div class="table-wrap"><table style="min-width:620px"><thead><tr><th>Prestation</th><th>Unité</th><th style="text-align:right">Prix</th><th>Devise</th><th></th></tr></thead><tbody>'+prestations().map(x=>'<tr style="cursor:default">'+
-      '<td><input class="inp" id="ps-l-'+esc(x.id)+'" value="'+esc(x.label)+'" data-presta="label" data-id="'+esc(x.id)+'" aria-label="Nom"><input class="inp" style="margin-top:6px;font-size:13px" id="ps-d-'+esc(x.id)+'" value="'+esc(x.desc||'')+'" data-presta="desc" data-id="'+esc(x.id)+'" placeholder="Détail (facultatif)" aria-label="Détail"></td>'+
-      '<td><select class="inp" id="ps-u-'+esc(x.id)+'" data-presta="unit" data-id="'+esc(x.id)+'" aria-label="Unité">'+UNITS.map(u=>'<option'+(u===x.unit?' selected':'')+'>'+u+'</option>').join('')+'</select></td>'+
-      '<td><input class="inp mono" style="text-align:right" type="number" min="0" step="any" id="ps-p-'+esc(x.id)+'" value="'+esc(x.price)+'" data-presta="price" data-id="'+esc(x.id)+'" aria-label="Prix"></td>'+
-      '<td><select class="inp" id="ps-c-'+esc(x.id)+'" data-presta="currency" data-id="'+esc(x.id)+'" aria-label="Devise">'+Object.keys(CURRENCIES).map(k=>'<option value="'+k+'"'+((x.currency||'MGA')===k?' selected':'')+'>'+k+'</option>').join('')+'</select></td>'+
-      '<td><button class="icon-btn sm danger" data-act="presta-del" data-id="'+esc(x.id)+'" data-confirm="✓" aria-label="Supprimer">'+ICON.trash+'</button></td></tr>').join('')+'</tbody></table></div>'
-    :'<div class="empty"><b>Aucune prestation</b>Ex. : Réalisation d\'un skit, Post sponsorisé Instagram, Journée de tournage, Montage vidéo.</div>';
-  h+='<section class="panel"><h3>Ajouter une prestation</h3><form class="add-form" data-form="presta"><input class="inp" id="presta-new" placeholder="Ex. : Post sponsorisé Instagram" autocomplete="off"><select class="inp" id="presta-unit" aria-label="Unité">'+UNITS.map(u=>'<option>'+u+'</option>').join('')+'</select><input class="inp mono" type="number" min="0" step="any" id="presta-price" placeholder="Prix" style="max-width:150px"><select class="inp" id="presta-cur" aria-label="Devise">'+Object.keys(CURRENCIES).map(k=>'<option value="'+k+'">'+k+'</option>').join('')+'</select><button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
-  return h;
-}
-function compBillingFields(c,admin){
-  const F=[['contact','Contact'],['phone','Téléphone'],['email','E-mail'],['nif','NIF'],['stat','STAT'],['rcs','RCS'],['address','Adresse'],['country','Pays']];
-  return '<details class="fold" id="cbf-'+esc(c.id)+'"><summary style="font-size:14px">Infos de facturation</summary><div class="f-grid" style="margin-top:8px">'+F.map(f=>'<label class="field'+(f[0]==='address'?' wide':'')+'"><span>'+f[1]+'</span><input class="inp" id="cf-'+f[0]+'-'+esc(c.id)+'" value="'+esc(c[f[0]]||'')+'" data-compf="'+f[0]+'" data-id="'+esc(c.id)+'"'+(admin?'':' disabled')+'></label>').join('')+'</div></details>';
-}
 
 /* ----- Éditeur de document ----- */
 let docDraft=null,docOrig=null;
@@ -1518,8 +1449,7 @@ function newDoc(kind,preset){preset=preset||{};const p=profOf(preset.profileId)|
   return {id:'d'+uid(),kind,profileId:p.id,number:nextNumber(kind,p.id,date),date,dueDate:addDays(date,kind==='devis'?30:15),companyId:preset.companyId||'',clientSnap:null,profileSnap:null,subject:'',
     lines:[{id:uid(),label:'',qty:1,unit:'forfait',price:0}],discount:0,taxRate:+p.taxRate||0,currency:p.currency||'MGA',notes:kind==='devis'?(p.quoteNotes||''):(p.invoiceNotes||''),status:'brouillon',contentId:'',createdAt:Date.now()};}
 function openDoc(id,preset){
-  if(!isAdmin()){toast('Réservé à la vue admin.');return;}
-  if(!profiles().length){go('business',{bizTab:'prof'});toast('Crée d\'abord le profil de ton entreprise.');return;}
+  if(!profiles().length){if(isAdmin()){go('business',{bizTab:'prof'});toast('Crée d\'abord le profil de ton entreprise.');}else toast('L\'admin doit d\'abord créer le profil de son entreprise.');return;}
   docDraft=id&&S.docs[id]?clone(S.docs[id]):newDoc(preset&&preset.kind||'facture',preset);docOrig=id&&S.docs[id]?clone(S.docs[id]):null;
   renderDoc();$('#docsheet').hidden=false;document.body.classList.add('locked');
 }
@@ -1543,21 +1473,21 @@ function deleteDoc(id){const before=S.docs[id];if(!before)return;delete S.docs[i
   scheduleRender();toast((before.kind==='devis'?'Devis ':'Facture ')+before.number+' supprimé'+(before.kind==='facture'?'e':''),()=>{S.docs[id]=before;if(S.mode==='cloud')enqueue('d:'+id,()=>DB.collection('docs').doc(id).set(before));else persistLocal();logChange('doc','restore',id,before.number,'Suppression annulée',null);scheduleRender();});}
 function saveDocDirect(d){S.docs[d.id]=d;if(S.mode==='cloud')enqueue('d:'+d.id,()=>DB.collection('docs').doc(d.id).set(clone(d)));else persistLocal();scheduleRender();}
 function renderDoc(){
-  const d=docDraft;if(!d)return;const isDev=d.kind==='devis';const st=docState(d);const panel=$('#doc-panel');const bodyEl=panel.querySelector('.sheet-body');const sc=bodyEl?bodyEl.scrollTop:0;
+  const d=docDraft;if(!d)return;const isDev=d.kind==='devis';const st=docState(d);docStatusShown=d.status;const panel=$('#doc-panel');const bodyEl=panel.querySelector('.sheet-body');const sc=bodyEl?bodyEl.scrollTop:0;
   const opt=(v,l,sel)=>'<option value="'+esc(v)+'"'+(sel===v?' selected':'')+'>'+esc(l)+'</option>';
-  let h='<div class="sheet-top"><button class="icon-btn" data-act="doc-close" aria-label="Fermer">'+ICON.x+'</button><span class="saved"><span class="pill" style="--c:'+st[2]+'">'+st[1]+'</span></span>'+
+  let h='<div class="sheet-top"><button class="icon-btn" data-act="doc-close" aria-label="Fermer">'+ICON.x+'</button><span class="saved"><span class="pill" style="--c:'+st[2]+'">'+st[1]+'</span>'+pendingPill(d)+'</span>'+
     '<button class="btn small" data-act="doc-pdf" data-id="'+esc(d.id)+'">Exporter en PDF</button><button class="btn small primary" data-act="doc-save">Enregistrer</button></div><div class="sheet-body">';
   h+='<div class="ed-sec"><span class="label">'+(isDev?'Devis':'Facture')+'</span><input class="title-inp mono" style="font-family:var(--f-mono);font-size:24px" id="dc-number" data-df="number" value="'+esc(d.number)+'" aria-label="Numéro">'+
     '<div class="f-grid"><label class="field"><span>Émetteur</span><select class="inp" id="dc-prof" data-df="profileId">'+profiles().map(p=>opt(p.id,p.name,d.profileId)).join('')+'</select></label>'+
-    '<label class="field"><span>Client</span><select class="inp" id="dc-client" data-df="companyId">'+opt('','Choisir une boîte…',d.companyId)+companies().map(c=>opt(c.id,c.label,d.companyId)).join('')+'</select></label>'+
-    '<label class="field"><span>Statut</span><select class="inp" id="dc-status" data-df="status">'+DOC_STATUS[d.kind].map(s=>opt(s[0],s[1],d.status)).join('')+'</select></label>'+
+    '<label class="field"><span>Client</span><select class="inp" id="dc-client" data-df="companyId">'+opt('','Choisir un client…',d.companyId)+companies().map(c=>opt(c.id,c.label,d.companyId)).join('')+'</select></label>'+
+    '<label class="field"><span>Statut</span><select class="inp" id="dc-status" data-df="status"'+(!isAdmin()&&!can('payStatus')?' disabled':'')+'>'+DOC_STATUS[d.kind].map(s=>opt(s[0],s[1],d.status)).join('')+'</select></label>'+
     '<label class="field"><span>Date</span><input class="inp" type="date" id="dc-date" data-df="date" value="'+esc(d.date)+'"></label>'+
     '<label class="field"><span>'+(isDev?'Valable jusqu\'au':'Échéance de paiement')+'</span><input class="inp" type="date" id="dc-due" data-df="dueDate" value="'+esc(d.dueDate)+'"></label>'+
     '<label class="field"><span>Devise</span><select class="inp" id="dc-cur" data-df="currency">'+Object.keys(CURRENCIES).map(k=>opt(k,CURRENCIES[k].label,d.currency)).join('')+'</select></label>'+
     '<label class="field wide"><span>Objet</span><input class="inp" id="dc-subject" data-df="subject" value="'+esc(d.subject)+'" placeholder="Ex. : Campagne Instagram de novembre"></label>'+
     '<label class="field wide"><span>Projet lié (facultatif)</span><select class="inp" id="dc-content" data-df="contentId">'+opt('','Aucun',d.contentId)+contents().filter(c=>c.status!=='idee').map(c=>opt(c.id,titleOf(c),d.contentId)).join('')+'</select></label></div>';
-  const cl=compOf(d.companyId);if(cl&&!(cl.address||cl.nif))h+='<p class="hint" style="margin:0">Les infos de facturation de '+esc(cl.label)+' sont vides : complète-les dans Business → Boîtes → Infos de facturation.</p>';
-  if(!companies().length)h+='<p class="hint" style="margin:0">Ajoute tes clients dans Business → Boîtes.</p>';
+  const cl=compOf(d.companyId);if(cl&&!(cl.address||cl.nif))h+='<p class="hint" style="margin:0">Les infos de facturation de '+esc(cl.label)+' sont vides : complète-les dans Business → Clients.</p>';
+  if(!companies().length)h+='<p class="hint" style="margin:0">Ajoute tes clients dans Business → Clients.</p>';
   h+='</div>';
   h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Prestations</h2></div><div class="doc-lines"><div class="dl dl-h"><span>Désignation</span><span>Qté</span><span>Unité</span><span>Prix unitaire</span><span style="text-align:right">Total</span><span></span></div>'+
     d.lines.map(l=>'<div class="dl"><textarea class="inp" rows="1" id="dl-l-'+esc(l.id)+'" data-dl="label" data-lid="'+esc(l.id)+'" placeholder="Désignation de la prestation" aria-label="Désignation">'+esc(l.label)+'</textarea>'+
@@ -1573,7 +1503,7 @@ function renderDoc(){
   h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Mentions &amp; conditions</h2></div><textarea class="inp" rows="3" id="dc-notes" data-df="notes" placeholder="Conditions de paiement, acompte, validité…">'+esc(d.notes)+'</textarea>'+
     (profOf(d.profileId)&&profOf(d.profileId).payment?'<p class="hint" style="margin:0">Les coordonnées de paiement de ton profil seront ajoutées sur le PDF.</p>':'')+'</div>';
   h+='<div class="ed-foot">'+(isDev?'<button class="btn" data-act="doc-tofac">'+ICON.arrow+'Transformer en facture</button>':'')+
-    (!isDev&&d.status!=='payee'?'<button class="btn" data-act="doc-paid">'+ICON.check+'Marquer payée</button>':'')+
+    (!isDev&&d.status!=='payee'?'<button class="btn" data-act="doc-paid">'+ICON.check+(isAdmin()?'Marquer payée':'Signaler comme payée')+'</button>':'')+
     '<button class="btn" data-act="doc-dup">'+ICON.copy+'Dupliquer</button>'+(S.docs[d.id]?'<button class="btn danger" data-act="doc-del" data-id="'+esc(d.id)+'" data-confirm="Supprimer définitivement ?">'+ICON.trash+'Supprimer</button>':'')+'</div>';
   h+='</div>';panel.innerHTML=h;panel.querySelectorAll('textarea[data-dl]').forEach(t=>{t.style.height='auto';t.style.height=Math.max(40,t.scrollHeight+2)+'px';});const nb=panel.querySelector('.sheet-body');if(nb)nb.scrollTop=sc;
 }
@@ -1589,7 +1519,10 @@ $('#doc-panel').addEventListener('change',e=>{if(!docDraft)return;const el=e.tar
       const line={id:uid(),label:x.label+(x.desc?'\n'+x.desc:''),qty:1,unit:x.unit||'forfait',price:+x.price||0};if(empty)docDraft.lines=[line];else docDraft.lines.push(line);
       if(x.currency&&x.currency!==docDraft.currency&&!S.docs[docDraft.id]&&empty)docDraft.currency=x.currency;}renderDoc();return;}
   if(el.dataset.df==='profileId'){const p=profOf(el.value);if(p&&!S.docs[docDraft.id]){docDraft.number=nextNumber(docDraft.kind,p.id,docDraft.date);docDraft.currency=p.currency||docDraft.currency;docDraft.taxRate=+p.taxRate||0;docDraft.notes=docDraft.kind==='devis'?(p.quoteNotes||docDraft.notes):(p.invoiceNotes||docDraft.notes);}renderDoc();}
-  else if(el.dataset.df==='status'){if(el.value==='payee')docDraft.paidAt=today();renderDoc();}
+  else if(el.dataset.df==='status'){const to=el.value;
+    if(!isAdmin()&&needsValidation(docDraft.kind,to)){docDraft.status=docStatusShown;if(can('payStatus')){requestDocStatus(docDraft,to);saveDoc(true);}else toast(DENIED);}
+    else{if(isAdmin())docDraft.pendingStatus=null;if(to==='payee')docDraft.paidAt=today();}
+    renderDoc();}
   else if(['currency','companyId'].includes(el.dataset.df))renderDoc();});
 $('#docsheet').addEventListener('click',e=>{if(e.target.id==='docsheet')closeDoc();});
 
@@ -1659,11 +1592,189 @@ function loadLogo(pid,file){
       updateSettings(s=>{const p=(s.profiles||[]).find(x=>x.id===pid);if(p){p.logo=url;p.logoW=w;p.logoH=h;}},'Logo du profil mis à jour');toast('Logo enregistré');};
     img.onerror=()=>toast('Image illisible.');img.src=fr.result;};fr.readAsDataURL(file);
 }
+
+/* ================= Autorisations de l'assistante ================= */
+const PERMS=[
+  ['Projets',[['projEdit','Créer et modifier les projets',true],['projStatus','Changer le statut des projets',true],['projDelete','Supprimer des projets',false],['calMove','Changer les dates (calendrier, glisser-déposer)',true]]],
+  ['Idées',[['ideaDeleteOwn','Supprimer ses propres idées',true]]],
+  ['Réseaux',[['accounts','Gérer les comptes des réseaux',true]]],
+  ['Business',[['rdv','Voir et gérer les rendez-vous',true],['clients','Gérer les clients',true],['devis','Créer, modifier et exporter les devis',true],['factures','Créer, modifier et exporter les factures',true],
+    ['toCollect','Voir l\'argent à réclamer',true],['payStatus','Changer le statut des paiements (avec ta validation)',true],['entreprises','Voir le résumé de tes entreprises',true],['prestaEdit','Modifier le catalogue de prestations',false]]],
+  ['Autre',[['history','Voir l\'historique des modifications',false]]]
+];
+const PERM_DEFAULTS={};PERMS.forEach(g=>g[1].forEach(p=>{PERM_DEFAULTS[p[0]]=p[2];}));
+function can(k){if(isAdmin())return true;const pm=(S.settings&&S.settings.perms)||{};return k in pm?!!pm[k]:!!PERM_DEFAULTS[k];}
+(function(){const st=document.createElement('style');st.textContent=Object.keys(PERM_DEFAULTS).map(k=>'body.deny-'+k+' .need-'+k).join(',')+'{display:none!important}';document.head.appendChild(st);})();
+function applyPermClasses(){Object.keys(PERM_DEFAULTS).forEach(k=>document.body.classList.toggle('deny-'+k,!can(k)));}
+const DENIED='Cette action n\'est pas autorisée dans la vue assistante.';
+const ACT_PERM={'del-content':'projDelete','ed-delete':'projDelete','new':'projEdit','open':'projEdit','peek-edit':'projEdit','peek-dup':'projEdit','ed-dup':'projEdit','ed-addpub':'projEdit','ed-delpub':'projEdit',
+  'ed-addshoot':'projEdit','ed-delshoot':'projEdit','ed-addscene':'projEdit','ed-delscene':'projEdit','ed-theme':'projEdit','peek-delpub':'projEdit',
+  'advance':'projStatus','mark-done':'projStatus','ed-status':'projStatus','acc-del':'accounts','acc-nature':'accounts',
+  'rdv-new':'rdv','rdv-save':'rdv','rdv-del':'rdv','comp-del':'clients','comp-filter':'rdv'};
+const ADMIN_ONLY=['restore','type-del','theme-del','plat-del','chan-del','idea-validate','idea-review','idea-promote','export','import','doc-approve','doc-reject'];
+function actAllowed(a,el){
+  if(isAdmin())return true;
+  if(ADMIN_ONLY.includes(a)){toast('Réservé à la vue admin.');return false;}
+  if(a==='idea-del'&&!can('ideaDeleteOwn')){toast(DENIED);return false;}
+  const k=ACT_PERM[a];if(k&&!can(k)){toast(DENIED);return false;}
+  return true;
+}
+function permsPanel(){
+  const pm=(S.settings&&S.settings.perms)||{};
+  return '<section class="panel"><div class="panel-h"><h2>Autorisations de '+esc(roleName('assistant'))+'</h2></div><p class="hint" style="margin:-4px 0 12px">Active ou coupe chaque fonction pour la vue assistante. Le changement s\'applique dès sa prochaine synchronisation.</p>'+
+    PERMS.map(g=>'<div class="perm-group"><span class="label">'+esc(g[0])+'</span>'+g[1].map(p=>{const on=p[0] in pm?!!pm[p[0]]:p[2];
+      return '<label class="perm"><span>'+esc(p[1])+'</span><input type="checkbox" class="switch" id="perm-'+p[0]+'" data-perm="'+p[0]+'"'+(on?' checked':'')+'></label>';}).join('')+'</div>').join('')+
+    '<p class="hint" style="margin:10px 0 0">Toujours réservé à toi : modifier tes entreprises, voir le chiffre d\'affaires, valider les idées et les paiements, les réglages et le code PIN.</p></section>';
+}
+
+/* ================= Validation des statuts (devis / factures) ================= */
+const NEEDS_OK={facture:['payee','annulee'],devis:['accepte','refuse']};
+const needsValidation=(kind,to)=>(NEEDS_OK[kind]||[]).includes(to);
+const statusLabel=(kind,to)=>((DOC_STATUS[kind]||[]).find(x=>x[0]===to)||[0,to])[1];
+let docStatusShown='';
+function requestDocStatus(d,to){d.pendingStatus={to,by:roleName(ROLE),at:Date.now()};toast('Demande envoyée : l\'admin doit valider « '+statusLabel(d.kind,to)+' »');}
+function pendingDocs(kind){return docs().filter(d=>d.pendingStatus&&(!kind||d.kind===kind));}
+function approveDoc(id,ok){
+  const d=S.docs[id];if(!d||!d.pendingStatus)return;const before=clone(d);const x=clone(d);const to=x.pendingStatus.to;
+  if(ok){x.status=to;if(to==='payee')x.paidAt=today();}x.lastDecision={to,ok,at:Date.now()};x.pendingStatus=null;x.updatedAt=Date.now();saveDocDirect(x);
+  logChange('doc','update',id,(x.kind==='devis'?'Devis ':'Facture ')+x.number,(ok?'Validé : ':'Refusé : ')+statusLabel(x.kind,to),before);
+  if(docDraft&&docDraft.id===id){docDraft=clone(x);docOrig=clone(x);renderDoc();}
+  toast((ok?'Validé : ':'Refusé : ')+x.number+' → '+statusLabel(x.kind,to));
+}
+function pendingPill(d){if(d.pendingStatus)return '<span class="pill" style="--c:#C98C00">→ '+esc(statusLabel(d.kind,d.pendingStatus.to))+' · à valider</span>';
+  if(!isAdmin()&&d.lastDecision&&!d.lastDecision.ok&&Date.now()-d.lastDecision.at<14*864e5)return '<span class="pill" style="--c:#D2402C">« '+esc(statusLabel(d.kind,d.lastDecision.to))+' » refusé</span>';return '';}
+
+/* ================= Business (v3.2) ================= */
+function bizTabs(){return [['rdv','Rendez-vous',can('rdv')],['comp','Clients',true],['fac','Factures',can('factures')],['dev','Devis',can('devis')],['presta','Prestations',true],['prof',isAdmin()?'Mes entreprises':'Les entreprises',can('entreprises')]].filter(t=>t[2]);}
+function viewBusiness(){
+  const u=S.ui;const tabs=bizTabs();if(!tabs.some(t=>t[0]===u.bizTab))u.bizTab=tabs[0][0];
+  let h='<div class="wrap"><div class="head"><div><span class="label">Business</span><h1>Business</h1><p class="muted">Rendez-vous, clients, devis et factures. Les rendez-vous apparaissent aussi dans le calendrier.</p></div>'+
+    (u.bizTab==='rdv'?'<button class="btn primary" data-act="rdv-new">'+ICON.plus+'Nouveau rendez-vous</button>':'')+'</div>';
+  h+='<div class="seg" role="group" aria-label="Section">'+tabs.map(m=>'<button data-act="biz-tab" data-tab="'+m[0]+'" aria-pressed="'+(u.bizTab===m[0])+'">'+m[1]+(m[0]==='fac'&&isAdmin()&&pendingDocs('facture').length?' · '+pendingDocs('facture').length:'')+(m[0]==='dev'&&isAdmin()&&pendingDocs('devis').length?' · '+pendingDocs('devis').length:'')+'</button>').join('')+'</div>';
+  if(BILL_TABS.includes(u.bizTab))h+=billingTab(u.bizTab);
+  else if(u.bizTab==='comp')h+=viewClients();
+  else h+=viewRdvList();
+  return h+'</div>';
+}
+function viewRdvList(){
+  const u=S.ui;const t=today();const all=Object.values(S.rdv).filter(x=>isValidDate(x.date)).sort((a,b)=>(a.date+(a.start||'99'))<(b.date+(b.start||'99'))?-1:1);
+  let h='<div class="filters"><select class="inp'+(u.rdvFilter?' on':'')+'" id="rdv-filter" data-rdv-filter="1" aria-label="Filtrer les rendez-vous"><option value="">Tous les rendez-vous</option><option value="pro"'+(u.rdvFilter==='pro'?' selected':'')+'>Pro (tous les clients)</option><option value="perso"'+(u.rdvFilter==='perso'?' selected':'')+'>Perso</option>'+
+    companies().map(c=>'<option value="'+esc(c.id)+'"'+(u.rdvFilter===c.id?' selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>'+
+    '<span class="legend" style="margin:0"><span><span class="dot" style="--c:'+settings().persoColor+'"></span>Perso</span>'+companies().map(c=>'<span><span class="dot" style="--c:'+c.color+'"></span>'+esc(c.label)+'</span>').join('')+'</span></div>';
+  const up=all.filter(x=>x.date>=t&&rdvPass(x));const past=all.filter(x=>x.date<t&&rdvPass(x)).reverse().slice(0,60);
+  const bd={};up.forEach(x=>{(bd[x.date]=bd[x.date]||[]).push(x);});
+  h+=up.length?'<div class="agenda">'+Object.keys(bd).map(day=>'<div class="agenda-day"><div class="agenda-date"><b>'+pd(day).getDate()+'</b><span class="label">'+DAYS[dow(day)]+' · '+MSHORT[pd(day).getMonth()]+'</span></div><div class="panel" style="padding:6px 14px"><div class="rows">'+bd[day].map(x=>rdvRow(x,{showRel:true})).join('')+'</div></div></div>').join('')+'</div>'
+    :'<div class="empty"><b>Aucun rendez-vous à venir</b>Ajoute ton prochain rendez-vous, pro ou perso.<br><button class="btn primary" data-act="rdv-new">Nouveau rendez-vous</button></div>';
+  if(past.length)h+='<details class="fold" id="rdv-past"><summary>Rendez-vous passés ('+past.length+')</summary><div class="panel" style="padding:6px 14px;margin-top:10px"><div class="rows">'+past.map(x=>rdvRow(x,{showDate:true})).join('')+'</div></div></details>';
+  return h;
+}
+const CLIENT_FIELDS=[['contact','Contact'],['phone','Téléphone'],['email','E-mail'],['nif','NIF'],['stat','STAT'],['rcs','RCS'],['address','Adresse'],['country','Pays']];
+function viewClients(){
+  const ed=can('clients');const t=today();const all=Object.values(S.rdv);
+  let h='<p class="muted" style="margin:0">Tes clients servent partout : rendez-vous pro, projets, devis et factures. Leurs infos sont reprises automatiquement sur les documents.</p>';
+  if(ed)h+='<section class="panel"><h3>Ajouter un client</h3><form class="add-form" data-form="comp"><input class="inp" id="comp-new" placeholder="Nom du client (ex. Orange Madagascar)" autocomplete="off"><input type="color" class="swatch" id="comp-new-color" value="#3D5A80" aria-label="Couleur"><button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
+  if(!companies().length)return h+'<div class="empty"><b>Aucun client pour l\'instant</b>'+(ed?'Ajoute ton premier client ci-dessus.':'Aucun client enregistré.')+'</div>';
+  h+='<div class="grid-2">'+companies().map(c=>{const mine=all.filter(x=>x.kind!=='perso'&&x.companyId===c.id);const next=mine.filter(x=>x.date>=t).sort((a,b)=>a.date<b.date?-1:1)[0];
+      const pj=contents().filter(x=>x.companyId===c.id).length;const nd=docs().filter(d=>d.companyId===c.id).length;const dis=ed?'':' disabled';
+      return '<section class="panel comp-card"><div class="set-item"><input type="color" class="swatch" id="cc-'+esc(c.id)+'" value="'+esc(c.color)+'" data-comp-color="'+esc(c.id)+'" aria-label="Couleur"'+dis+'>'+
+        '<input class="inp" id="cl-'+esc(c.id)+'" value="'+esc(c.label)+'" data-comp-label="'+esc(c.id)+'" aria-label="Nom du client" style="font-weight:700"'+dis+'>'+
+        (ed?'<button class="icon-btn danger" data-act="comp-del" data-id="'+esc(c.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(c.label)+'">'+ICON.trash+'</button>':'')+'</div>'+
+        '<div class="f-grid">'+CLIENT_FIELDS.map(f=>'<label class="field'+(f[0]==='address'?' wide':'')+'"><span>'+f[1]+'</span><input class="inp" id="cf-'+f[0]+'-'+esc(c.id)+'" value="'+esc(c[f[0]]||'')+'" data-compf="'+f[0]+'" data-id="'+esc(c.id)+'"'+dis+'></label>').join('')+'</div>'+
+        '<div class="kvs"><div><span class="label">Prochain RDV</span><b>'+(next?esc(fmtShort(next.date))+(next.start?' · '+esc(next.start):''):'—')+'</b></div><div><span class="label">Projets</span><b>'+pj+'</b></div><div><span class="label">Devis et factures</span><b>'+nd+'</b></div></div>'+
+        '<div class="card-f">'+(can('rdv')?'<button class="btn small" data-act="rdv-new" data-comp="'+esc(c.id)+'">'+ICON.plus+'RDV</button>':'')+(can('devis')?'<button class="btn small" data-act="doc-new" data-kind="devis" data-comp="'+esc(c.id)+'">'+ICON.plus+'Devis</button>':'')+
+        (can('factures')?'<button class="btn small" data-act="doc-new" data-kind="facture" data-comp="'+esc(c.id)+'">'+ICON.plus+'Facture</button>':'')+(can('rdv')?'<button class="btn small ghost" data-act="comp-filter" data-id="'+esc(c.id)+'">Ses rendez-vous</button>':'')+'</div></section>';}).join('')+'</div>';
+  if(isAdmin())h+='<section class="panel comp-card"><h3>Rendez-vous perso</h3><div class="set-item"><input type="color" class="swatch" id="perso-color" value="'+esc(settings().persoColor)+'" data-perso-color="1" aria-label="Couleur des rendez-vous perso"><span class="muted">Couleur des rendez-vous perso dans le calendrier</span></div></section>';
+  return h;
+}
+function docRow(d){const st=docState(d);const t=docTotals(d);const cl=d.clientSnap&&d.clientSnap.name||(compOf(d.companyId)||{}).label||'Sans client';
+  return '<tr data-act="doc-open" data-id="'+esc(d.id)+'"><td class="mono"><b>'+esc(d.number)+'</b></td><td>'+esc(cl)+(d.subject?'<div class="hint">'+esc(d.subject)+'</div>':'')+'</td><td class="mono">'+fmtShort(d.date)+'</td><td class="mono">'+(isValidDate(d.dueDate)?fmtShort(d.dueDate):'—')+'</td><td class="mono" style="text-align:right;white-space:nowrap"><b>'+esc(money(t.total,d.currency))+'</b></td><td><div class="card-f"><span class="pill" style="--c:'+st[2]+'">'+st[1]+'</span>'+pendingPill(d)+'</div></td>'+
+    '<td><div class="row-acts"><button class="btn small" data-act="doc-pdf" data-id="'+esc(d.id)+'" title="Exporter en PDF">PDF</button></div></td></tr>';}
+function pendingPanel(kind){
+  const L=pendingDocs(kind);if(!isAdmin()||!L.length)return '';
+  return '<section class="panel" style="border-color:#C98C00"><div class="panel-h"><h2>À valider</h2><span class="mono muted">'+L.length+'</span></div><div class="rows">'+L.map(d=>{const cl=d.clientSnap&&d.clientSnap.name||(compOf(d.companyId)||{}).label||'Sans client';
+    return '<div class="row"><button class="row-main" data-act="doc-open" data-id="'+esc(d.id)+'"><b>'+esc(d.number)+' · '+esc(cl)+'</b><span class="row-meta"><span>'+esc(d.pendingStatus.by||'Assistante')+' demande : <b>'+esc(statusLabel(d.kind,d.pendingStatus.to))+'</b></span><span class="mono">'+esc(money(docTotals(d).total,d.currency))+'</span><span>'+fmtStamp(d.pendingStatus.at)+'</span></span></button>'+
+      '<div class="row-acts"><button class="btn small primary" data-act="doc-approve" data-id="'+esc(d.id)+'">'+ICON.check+'Valider</button><button class="btn small danger" data-act="doc-reject" data-id="'+esc(d.id)+'">Refuser</button></div></div>';}).join('')+'</div></section>';
+}
+function billingTab(tab){
+  if(tab==='prof')return isAdmin()?viewProfiles():viewEntreprises();
+  if(tab==='presta')return viewPrestations();
+  if(!profiles().length)return isAdmin()?'<div class="empty"><b>Commence par le profil de ton entreprise</b>Nom, téléphone, mail, NIF, STAT, RCS, adresse et pays : tu les remplis une fois, ils apparaissent ensuite sur tous tes devis et factures.<br><button class="btn primary" data-act="biz-tab" data-tab="prof">Créer mon profil d\'entreprise</button></div>'
+    :'<div class="empty"><b>Aucune entreprise configurée</b>L\'admin doit d\'abord créer le profil de son entreprise.</div>';
+  const kind=tab==='dev'?'devis':'facture';const f=S.ui.docFilter||{};
+  let list=docs().filter(d=>d.kind===kind).sort((a,b)=>(b.date+b.number)>(a.date+a.number)?1:-1);
+  if(f.status)list=list.filter(d=>docState(d)[0]===f.status);if(f.profile)list=list.filter(d=>d.profileId===f.profile);if(f.client)list=list.filter(d=>d.companyId===f.client);
+  let h=pendingPanel(kind);
+  if(kind==='facture'){
+    const all=docs().filter(d=>d.kind==='facture'&&d.status!=='annulee'&&d.status!=='brouillon');const t=today();const ms=t.slice(0,7);
+    const open=all.filter(d=>d.status==='envoyee');const late=open.filter(d=>docState(d)[0]==='retard');
+    if(isAdmin()){
+      const month=all.filter(d=>String(d.date).slice(0,7)===ms);const paidM=all.filter(d=>d.status==='payee'&&String(d.paidAt||d.date).slice(0,7)===ms);
+      h+='<div class="stats" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="stat"><span class="label">Facturé ce mois</span><strong style="font-size:20px">'+esc(sumBy(month,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(month.length,'facture')+'</span></div>'+
+        '<div class="stat"><span class="label">Encaissé ce mois</span><strong style="font-size:20px;color:var(--ok)">'+esc(sumBy(paidM,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(paidM.length,'facture')+' payée'+(paidM.length>1?'s':'')+'</span></div>'+
+        '<div class="stat"><span class="label">À encaisser</span><strong style="font-size:20px">'+esc(sumBy(open,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(open.length,'facture')+' envoyée'+(open.length>1?'s':'')+'</span></div>'+
+        '<div class="stat'+(late.length?' alert':'')+'"><span class="label">En retard</span><strong style="font-size:20px">'+esc(sumBy(late,d=>docTotals(d).total))+'</strong><span class="muted">'+plural(late.length,'facture')+'</span></div></div>';
+    }else if(can('toCollect')){
+      h+='<section class="panel"><div class="panel-h"><h2>Argent à réclamer</h2><span class="mono" style="font-weight:700">'+esc(sumBy(open,d=>docTotals(d).total))+'</span></div>'+
+        (open.length?'<div class="rows">'+open.sort((a,b)=>(a.dueDate||'')<(b.dueDate||'')?-1:1).map(d=>{const st=docState(d);const cl=d.clientSnap&&d.clientSnap.name||(compOf(d.companyId)||{}).label||'Sans client';
+          return '<div class="row"><button class="row-main" data-act="doc-open" data-id="'+esc(d.id)+'"><b>'+esc(cl)+' · '+esc(d.number)+'</b><span class="row-meta"><span class="pill" style="--c:'+st[2]+'">'+st[1]+'</span>'+pendingPill(d)+'<span>Échéance '+(isValidDate(d.dueDate)?fmtShort(d.dueDate)+' ('+rel(d.dueDate)+')':'—')+'</span>'+(d.clientSnap&&d.clientSnap.contact?'<span>Contact : '+esc(d.clientSnap.contact)+'</span>':'')+'</span></button><span class="mono" style="font-weight:700;white-space:nowrap">'+esc(money(docTotals(d).total,d.currency))+'</span></div>';}).join('')+'</div>'
+          :'<div class="empty" style="padding:14px">Rien à réclamer : toutes les factures envoyées sont payées.</div>')+'</section>';
+    }
+  }
+  const opt=(v,l,sel)=>'<option value="'+esc(v)+'"'+(sel===v?' selected':'')+'>'+esc(l)+'</option>';
+  const sts=(DOC_STATUS[kind]).concat(kind==='facture'?[['retard','En retard']]:[]);
+  h+='<div class="cal-bar"><div class="filters">'+
+    '<select class="inp'+(f.status?' on':'')+'" id="df-status" data-docf="status" aria-label="Statut">'+opt('','Tous les statuts',f.status)+sts.map(s=>opt(s[0],s[1],f.status)).join('')+'</select>'+
+    (profiles().length>1?'<select class="inp'+(f.profile?' on':'')+'" id="df-profile" data-docf="profile" aria-label="Entreprise">'+opt('','Toutes les entreprises',f.profile)+profiles().map(p=>opt(p.id,p.name,f.profile)).join('')+'</select>':'')+
+    '<select class="inp'+(f.client?' on':'')+'" id="df-client" data-docf="client" aria-label="Client">'+opt('','Tous les clients',f.client)+companies().map(c=>opt(c.id,c.label,f.client)).join('')+'</select></div>'+
+    '<button class="btn primary" data-act="doc-new" data-kind="'+kind+'">'+ICON.plus+(kind==='devis'?'Nouveau devis':'Nouvelle facture')+'</button></div>';
+  h+=list.length?'<div class="table-wrap"><table><thead><tr><th>N°</th><th>Client</th><th>Date</th><th>'+(kind==='devis'?'Validité':'Échéance')+'</th><th style="text-align:right">Montant</th><th>Statut</th><th></th></tr></thead><tbody>'+list.map(docRow).join('')+'</tbody></table></div>'
+    :'<div class="empty"><b>'+(kind==='devis'?'Aucun devis':'Aucune facture')+'</b>'+(Object.values(f).some(Boolean)?'Change les filtres.':'Crée le premier : les prestations, la TVA et le total se calculent tout seuls.')+'</div>';
+  if(kind==='facture'&&isAdmin()){
+    const yr=today().slice(0,4);const inv=docs().filter(d=>d.kind==='facture'&&d.status!=='annulee'&&d.status!=='brouillon'&&String(d.date).startsWith(yr));
+    const per={};inv.forEach(d=>{const k=d.companyId||'_';(per[k]=per[k]||[]).push(d);});const keys=Object.keys(per);
+    if(keys.length)h+='<section class="panel"><div class="panel-h"><h2>Revenus '+yr+' par client</h2></div><div>'+keys.map(k=>{const c=compOf(k);const L=per[k];
+      return '<div class="acc-row"><span class="acc-name"><span class="dot" style="--c:'+(c?c.color:'#8A8FA3')+'"></span><span>'+esc(c?c.label:'Sans client')+'</span></span><div class="kv"><b>'+esc(sumBy(L,d=>docTotals(d).total))+'</b>facturé</div><div class="kv"><b>'+esc(sumBy(L.filter(d=>d.status==='payee'),d=>docTotals(d).total))+'</b>encaissé</div></div>';}).join('')+'</div></section>';
+  }
+  return h;
+}
+function viewEntreprises(){
+  if(!profiles().length)return '<div class="empty"><b>Aucune entreprise</b>L\'admin n\'a pas encore créé de profil d\'entreprise.</div>';
+  return '<p class="muted" style="margin:0">Les entreprises qui émettent les devis et factures. Tu peux les choisir comme émetteur, sans les modifier.</p><div class="grid-2">'+profiles().map(p=>{
+    const rows=[['Activité',p.activity],['Téléphone',p.phone],['E-mail',p.email],['NIF',p.nif],['STAT',p.stat],['RCS',p.rcs],['Adresse',p.address],['Pays',p.country]].filter(x=>x[1]);
+    const nd=docs().filter(d=>d.profileId===p.id);
+    return '<section class="panel comp-card"><div class="set-item">'+(p.logo?'<img src="'+esc(p.logo)+'" alt="" style="height:36px;width:auto;border-radius:6px;background:#fff;border:1px solid var(--line);padding:2px">':'<span class="dot" style="--c:'+esc(p.color||'#4636D9')+';width:12px;height:12px"></span>')+'<h2>'+esc(p.name)+'</h2></div>'+
+      '<div class="kvs">'+rows.map(r=>'<div><span class="label">'+r[0]+'</span><b>'+esc(r[1])+'</b></div>').join('')+'</div>'+
+      '<div class="card-f">'+(can('devis')?'<button class="btn small" data-act="doc-new" data-kind="devis" data-prof="'+esc(p.id)+'">'+ICON.plus+'Devis</button>':'')+(can('factures')?'<button class="btn small" data-act="doc-new" data-kind="facture" data-prof="'+esc(p.id)+'">'+ICON.plus+'Facture</button>':'')+'<span class="hint">'+plural(nd.filter(d=>d.kind==='devis').length,'devis','devis')+' · '+plural(nd.filter(d=>d.kind==='facture').length,'facture')+'</span></div></section>';}).join('')+'</div>';
+}
+function viewPrestations(){
+  const ed=can('prestaEdit');
+  let h='<p class="muted" style="margin:0">Le catalogue de prestations. Tu les ajoutes en un clic dans les devis et factures, et le prix reste modifiable sur chaque document.</p>';
+  if(!ed)return h+(prestations().length?'<div class="table-wrap"><table style="min-width:520px"><thead><tr><th>Prestation</th><th>Unité</th><th style="text-align:right">Prix</th></tr></thead><tbody>'+prestations().map(x=>'<tr style="cursor:default"><td><b>'+esc(x.label)+'</b>'+(x.desc?'<div class="hint">'+esc(x.desc)+'</div>':'')+'</td><td>'+esc(x.unit)+'</td><td class="mono" style="text-align:right">'+esc(money(x.price,x.currency||'MGA'))+'</td></tr>').join('')+'</tbody></table></div>'
+    :'<div class="empty"><b>Aucune prestation</b>Le catalogue est vide.</div>');
+  h+=prestations().length?'<div class="table-wrap"><table style="min-width:620px"><thead><tr><th>Prestation</th><th>Unité</th><th style="text-align:right">Prix</th><th>Devise</th><th></th></tr></thead><tbody>'+prestations().map(x=>'<tr style="cursor:default">'+
+      '<td><input class="inp" id="ps-l-'+esc(x.id)+'" value="'+esc(x.label)+'" data-presta="label" data-id="'+esc(x.id)+'" aria-label="Nom"><input class="inp" style="margin-top:6px;font-size:13px" id="ps-d-'+esc(x.id)+'" value="'+esc(x.desc||'')+'" data-presta="desc" data-id="'+esc(x.id)+'" placeholder="Détail (facultatif)" aria-label="Détail"></td>'+
+      '<td><select class="inp" id="ps-u-'+esc(x.id)+'" data-presta="unit" data-id="'+esc(x.id)+'" aria-label="Unité">'+UNITS.concat(UNITS.includes(x.unit)?[]:[x.unit]).map(u=>'<option'+(u===x.unit?' selected':'')+'>'+esc(u)+'</option>').join('')+'</select></td>'+
+      '<td><input class="inp mono" style="text-align:right" type="number" min="0" step="any" id="ps-p-'+esc(x.id)+'" value="'+esc(x.price)+'" data-presta="price" data-id="'+esc(x.id)+'" aria-label="Prix"></td>'+
+      '<td><select class="inp" id="ps-c-'+esc(x.id)+'" data-presta="currency" data-id="'+esc(x.id)+'" aria-label="Devise">'+Object.keys(CURRENCIES).map(k=>'<option value="'+k+'"'+((x.currency||'MGA')===k?' selected':'')+'>'+k+'</option>').join('')+'</select></td>'+
+      '<td><button class="icon-btn sm danger" data-act="presta-del" data-id="'+esc(x.id)+'" data-confirm="✓" aria-label="Supprimer">'+ICON.trash+'</button></td></tr>').join('')+'</tbody></table></div>'
+    :'<div class="empty"><b>Aucune prestation</b>Ex. : Réalisation d\'un skit, Post sponsorisé Instagram, Journée de tournage, Montage vidéo.</div>';
+  h+='<section class="panel"><h3>Ajouter une prestation</h3><form class="add-form" data-form="presta"><input class="inp" id="presta-new" placeholder="Ex. : Post sponsorisé Instagram" autocomplete="off"><select class="inp" id="presta-unit" aria-label="Unité">'+UNITS.map(u=>'<option>'+u+'</option>').join('')+'</select><input class="inp mono" type="number" min="0" step="any" id="presta-price" placeholder="Prix" style="max-width:150px"><select class="inp" id="presta-cur" aria-label="Devise">'+Object.keys(CURRENCIES).map(k=>'<option value="'+k+'">'+k+'</option>').join('')+'</select><button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
+  return h;
+}
+
+/* ----- Actions facturation (avec autorisations) ----- */
+function docPerm(kind){return kind==='devis'?'devis':'factures';}
 function handleBillingClick(a,el,e){
   if(!a.startsWith('doc-')&&!a.startsWith('prof-')&&!a.startsWith('presta-'))return false;
-  if(!isAdmin()){toast('Réservé à la vue admin.');return true;}
   const id=el.dataset.id;
+  if(a.startsWith('prof-')&&!isAdmin()){toast('Réservé à la vue admin.');return true;}
+  if(a.startsWith('presta-')&&!can('prestaEdit')){toast(DENIED);return true;}
+  if((a==='doc-approve'||a==='doc-reject')&&!isAdmin()){toast('Réservé à la vue admin.');return true;}
+  const kindOf=()=>a==='doc-new'?(el.dataset.kind||'facture'):((S.docs[id]||docDraft||{}).kind||'facture');
+  if(a.startsWith('doc-')&&!['doc-approve','doc-reject','doc-close'].includes(a)&&!can(docPerm(kindOf()))){toast(DENIED);return true;}
   switch(a){
+    case 'doc-approve':e.stopPropagation();approveDoc(id,true);return true;
+    case 'doc-reject':e.stopPropagation();approveDoc(id,false);return true;
     case 'doc-new':openDoc(null,{kind:el.dataset.kind,profileId:el.dataset.prof,companyId:el.dataset.comp});return true;
     case 'doc-open':openDoc(id);return true;
     case 'doc-close':closeDoc();return true;
@@ -1671,14 +1782,15 @@ function handleBillingClick(a,el,e){
     case 'doc-pdf':e.stopPropagation();exportDocPdf(id);return true;
     case 'doc-addline':docDraft.lines.push({id:uid(),label:'',qty:1,unit:'forfait',price:0});renderDoc();{const l=docDraft.lines[docDraft.lines.length-1];const t=document.getElementById('dl-l-'+l.id);if(t)t.focus();}return true;
     case 'doc-delline':docDraft.lines=docDraft.lines.filter(l=>l.id!==el.dataset.lid);if(!docDraft.lines.length)docDraft.lines.push({id:uid(),label:'',qty:1,unit:'forfait',price:0});renderDoc();return true;
-    case 'doc-paid':docDraft.status='payee';docDraft.paidAt=today();saveDoc(true);renderDoc();toast('Facture marquée payée');return true;
-    case 'doc-dup':{saveDoc(true);const c=clone(docDraft);c.id='d'+uid();c.date=today();c.number=nextNumber(c.kind,c.profileId,c.date);c.dueDate=addDays(c.date,c.kind==='devis'?30:15);c.status='brouillon';c.paidAt='';c.profileSnap=null;c.clientSnap=null;c.createdAt=Date.now();c.lines=c.lines.map(l=>Object.assign({},l,{id:uid()}));
+    case 'doc-paid':if(!isAdmin()){if(!can('payStatus')){toast(DENIED);return true;}requestDocStatus(docDraft,'payee');saveDoc(true);renderDoc();return true;}
+      docDraft.status='payee';docDraft.paidAt=today();docDraft.pendingStatus=null;saveDoc(true);renderDoc();toast('Facture marquée payée');return true;
+    case 'doc-dup':{saveDoc(true);const c=clone(docDraft);c.id='d'+uid();c.date=today();c.number=nextNumber(c.kind,c.profileId,c.date);c.dueDate=addDays(c.date,c.kind==='devis'?30:15);c.status='brouillon';c.paidAt='';c.pendingStatus=null;c.lastDecision=null;c.profileSnap=null;c.clientSnap=null;c.createdAt=Date.now();c.lines=c.lines.map(l=>Object.assign({},l,{id:uid()}));
       docDraft=c;docOrig=null;saveDoc(true);renderDoc();toast('Copie créée : '+c.number);}return true;
-    case 'doc-tofac':{const src=saveDoc(true)||docDraft;const f=clone(src);f.id='d'+uid();f.kind='facture';f.date=today();f.number=nextNumber('facture',f.profileId,f.date);f.dueDate=addDays(f.date,15);f.status='brouillon';f.fromQuote=src.number;f.paidAt='';f.profileSnap=null;f.clientSnap=null;
+    case 'doc-tofac':{if(!can('factures')){toast(DENIED);return true;}const src=saveDoc(true)||docDraft;const f=clone(src);f.id='d'+uid();f.kind='facture';f.date=today();f.number=nextNumber('facture',f.profileId,f.date);f.dueDate=addDays(f.date,15);f.status='brouillon';f.fromQuote=src.number;f.paidAt='';f.pendingStatus=null;f.lastDecision=null;f.profileSnap=null;f.clientSnap=null;
       const p=profOf(f.profileId);f.notes=(p&&p.invoiceNotes)||'';f.notes=(f.notes?f.notes+'\n':'')+'Selon devis n° '+src.number+'.';f.createdAt=Date.now();f.lines=f.lines.map(l=>Object.assign({},l,{id:uid()}));
-      if(src.status!=='accepte'&&S.docs[src.id]){const q=Object.assign(clone(S.docs[src.id]),{status:'accepte'});saveDocDirect(q);}
-      docDraft=f;docOrig=null;saveDoc(true);renderDoc();toast('Facture '+f.number+' créée depuis le devis');}return true;
-    case 'doc-del':e.stopPropagation();deleteDoc(id);return true;
+      if(src.status!=='accepte'&&S.docs[src.id]){const q=clone(S.docs[src.id]);if(isAdmin()){q.status='accepte';q.pendingStatus=null;}else if(can('payStatus'))q.pendingStatus={to:'accepte',by:roleName(ROLE),at:Date.now()};saveDocDirect(q);}
+      docDraft=f;docOrig=null;saveDoc(true);renderDoc();toast('Facture '+f.number+' créée depuis le devis'+(!isAdmin()?' (acceptation du devis à valider par l\'admin)':''));}return true;
+    case 'doc-del':{e.stopPropagation();const d=S.docs[id];if(!isAdmin()&&d&&d.status!=='brouillon'){toast('Tu peux supprimer seulement les brouillons.');return true;}deleteDoc(id);}return true;
     case 'prof-del':{if(docs().some(d=>d.profileId===id)){toast('Ce profil est utilisé par des documents.');return true;}const lbl=(profOf(id)||{}).name||'';updateSettings(s=>{s.profiles=(s.profiles||[]).filter(p=>p.id!==id);},'Profil « '+lbl+' » supprimé');}return true;
     case 'prof-nologo':updateSettings(s=>{const p=(s.profiles||[]).find(x=>x.id===id);if(p){delete p.logo;delete p.logoW;delete p.logoH;}},'Logo retiré');return true;
     case 'presta-del':{const lbl=(prestations().find(x=>x.id===id)||{}).label||'';updateSettings(s=>{s.prestations=(s.prestations||[]).filter(x=>x.id!==id);},'Prestation « '+lbl+' » supprimée');}return true;
@@ -1686,23 +1798,28 @@ function handleBillingClick(a,el,e){
   return false;
 }
 function handleBillingSubmit(k){
-  if(!['prof','presta'].includes(k))return false;if(!isAdmin())return true;
-  if(k==='prof'){const v=$('#prof-new').value.trim();if(!v){toast('Écris le nom de l\'entreprise.');return true;}
+  if(!['prof','presta'].includes(k))return false;
+  if(k==='prof'){if(!isAdmin())return true;const v=$('#prof-new').value.trim();if(!v){toast('Écris le nom de l\'entreprise.');return true;}
     updateSettings(s=>{s.profiles=(s.profiles||[]).concat([{id:'p'+uid(),name:v,country:'Madagascar',currency:'MGA',taxRate:0,prefixF:'FAC',prefixD:'DEV',color:'#4636D9'}]);},'Profil d\'entreprise créé : '+v);$('#prof-new').value='';toast('Profil « '+v+' » créé : complète ses infos');}
-  if(k==='presta'){const v=$('#presta-new').value.trim();if(!v){toast('Écris le nom de la prestation.');return true;}const price=parseFloat($('#presta-price').value)||0;const unit=$('#presta-unit').value;const cur=$('#presta-cur').value;
+  if(k==='presta'){if(!can('prestaEdit'))return true;const v=$('#presta-new').value.trim();if(!v){toast('Écris le nom de la prestation.');return true;}const price=parseFloat($('#presta-price').value)||0;const unit=$('#presta-unit').value;const cur=$('#presta-cur').value;
     updateSettings(s=>{s.prestations=(s.prestations||[]).concat([{id:'s'+uid(),label:v,desc:'',unit,price,currency:cur}]);},'Prestation ajoutée : '+v);$('#presta-new').value='';$('#presta-price').value='';toast('Prestation ajoutée');}
   return true;
 }
 function handleBillingChange(el){
+  if(el.dataset.perm){if(!isAdmin())return true;const k=el.dataset.perm,v=el.checked;updateSettings(s=>{s.perms=Object.assign({},s.perms||{},{[k]:v});},'Autorisation « '+((PERMS.flatMap(g=>g[1]).find(p=>p[0]===k)||[0,k])[1])+' » '+(v?'activée':'coupée'));return true;}
   if(el.dataset.prof&&el.dataset.id){if(!isAdmin())return true;const f=el.dataset.prof,id=el.dataset.id;let v=el.value;if(f==='taxRate')v=parseFloat(v)||0;else if(f!=='color')v=String(v).trim();
     if(f==='name'&&!v){render();return true;}updateSettings(s=>{const p=(s.profiles||[]).find(x=>x.id===id);if(p)p[f]=v;},'Profil '+((profOf(id)||{}).name||'')+' : '+f);return true;}
-  if(el.dataset.profLogo){loadLogo(el.dataset.profLogo,el.files&&el.files[0]);el.value='';return true;}
-  if(el.dataset.presta&&el.dataset.id){if(!isAdmin())return true;const f=el.dataset.presta,id=el.dataset.id;let v=el.value;if(f==='price')v=parseFloat(v)||0;else if(f==='label'&&!v.trim()){render();return true;}
+  if(el.dataset.profLogo){if(!isAdmin())return true;loadLogo(el.dataset.profLogo,el.files&&el.files[0]);el.value='';return true;}
+  if(el.dataset.presta&&el.dataset.id){if(!can('prestaEdit'))return true;const f=el.dataset.presta,id=el.dataset.id;let v=el.value;if(f==='price')v=parseFloat(v)||0;else if(f==='label'&&!v.trim()){render();return true;}
     updateSettings(s=>{const x=(s.prestations||[]).find(p=>p.id===id);if(x)x[f]=v;},'Prestation modifiée');return true;}
-  if(el.dataset.compf&&el.dataset.id){if(!isAdmin())return true;const f=el.dataset.compf,id=el.dataset.id;const v=el.value.trim();updateSettings(s=>{const c=(s.companies||[]).find(x=>x.id===id);if(c)c[f]=v;},'Boîte '+((compOf(id)||{}).label||'')+' : infos de facturation');return true;}
+  if(el.dataset.compf&&el.dataset.id){if(!can('clients')){render();return true;}const f=el.dataset.compf,id=el.dataset.id;const v=el.value.trim();updateSettings(s=>{const c=(s.companies||[]).find(x=>x.id===id);if(c)c[f]=v;},'Client '+((compOf(id)||{}).label||'')+' : '+f);return true;}
+  if(el.dataset.compLabel||el.dataset.compColor){if(!can('clients')){render();return true;}const cid=el.dataset.compLabel||el.dataset.compColor;const v=el.value.trim();if(el.dataset.compLabel&&!v){render();return true;}
+    updateSettings(s=>{const c=s.companies.find(x=>x.id===cid);if(c){if(el.dataset.compLabel)c.label=v;else c.color=el.value;}},el.dataset.compLabel?'Client renommé : '+v:'Couleur du client');return true;}
   if(el.dataset.docf){S.ui.docFilter=Object.assign({},S.ui.docFilter||{},{[el.dataset.docf]:el.value});saveUI();render();return true;}
   return false;
 }
+function historyPanel(){const hs=S.history.slice(0,S.ui.histAll?HMAX_CLOUD:25);
+  return '<section class="panel"><div class="panel-h"><h2>Historique des modifications</h2><span class="mono muted">'+S.history.length+'</span></div>'+(hs.length?'<div class="hist">'+hs.map(histRow).join('')+'</div>'+(S.history.length>hs.length?'<button class="btn ghost small" data-act="hist-all">Voir tout l\'historique</button>':''):'<div class="empty"><b>Aucune modification enregistrée</b></div>')+'</section>';}
 
 /* ================= Rendu ================= */
 const VIEWS={home:viewHome,networks:viewNetworks,calendar:viewCalendar,contents:viewContents,ideas:viewIdeas,business:viewBusiness,settings:viewSettings,more:viewMore};
@@ -1717,7 +1834,7 @@ function render(){
   const board=$('#board');const bl=board?board.scrollLeft:0;
   document.body.dataset.role=ROLE||'none';
   if(!ROLE){document.body.classList.add('gated');main.innerHTML=viewGate();const pi=$('#gate-pin');if(pi)pi.focus();return;}
-  document.body.classList.remove('gated');
+  document.body.classList.remove('gated');applyPermClasses();
   if(!isAdmin()&&S.ui.view==='settings')S.ui.view='home';
   const openD=[...main.querySelectorAll('details[id][open]')].map(x=>x.id);
   main.innerHTML=(ROLE==='assistant'?'<div class="rolebar"><span>Vue assistante · '+esc(roleName('assistant'))+'</span><button data-act="switch-role">Changer de vue</button></div>':'')+VIEWS[S.ui.view]();
@@ -1726,7 +1843,7 @@ function render(){
   if(fid){const el=document.getElementById(fid);if(el){el.focus({preventScroll:true});try{if(s0!=null)el.setSelectionRange(s0,s1);}catch(e){}}}
   const nb=$('#board');if(nb)nb.scrollLeft=bl;
   document.querySelectorAll('.nav-btn[data-nav]').forEach(b=>{if(b.dataset.nav===S.ui.view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
-  const cs=contents();$('#cnt-contents').textContent=cs.filter(c=>c.status!=='idee').length||'';$('#cnt-ideas').textContent=ideasToHandle().length||'';$('#cnt-biz').textContent=Object.values(S.rdv).filter(x=>x.date>=today()&&x.date<=addDays(today(),6)).length||'';
+  const cs=contents();$('#cnt-contents').textContent=cs.filter(c=>c.status!=='idee').length||'';$('#cnt-ideas').textContent=ideasToHandle().length||'';$('#cnt-biz').textContent=((can('rdv')?Object.values(S.rdv).filter(x=>x.date>=today()&&x.date<=addDays(today(),6)).length:0)+(isAdmin()?pendingDocs().length:0))||'';
   $('#role-btn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Vue <b>'+esc(roleName(ROLE))+'</b> · changer</span>';$('#cnt-acc').textContent=Object.keys(S.accounts).length||'';
   if(peekId)renderPeek();
   if(ideaDraft&&!$('#idea').hidden&&!$('#idea-panel').contains(document.activeElement))renderIdea();
@@ -1767,8 +1884,9 @@ function updateContent(id,mut,summary){
 function syncStatusFromPubs(c){const ps=c.publications||[];if(ps.length&&ps.every(p=>p.done))c.status='publie';else if(c.status==='publie'&&ps.some(p=>!p.done))c.status='pret';}
 function advance(id){const c=S.contents[id];if(!c)return;if(c.status==='idee'){promoteIdea(id);return;}const i=STATUSES.findIndex(s=>s.id===c.status);const nx=STATUSES[i+1];if(!nx)return;
   updateContent(id,x=>{x.status=nx.id;if(nx.id==='publie')x.publications.forEach(p=>{p.done=true;});});toast('« '+titleOf(c)+' » → '+nx.label);}
-function markDone(id,pid,val){updateContent(id,c=>{const p=c.publications.find(x=>x.id===pid);if(p)p.done=val!==false;syncStatusFromPubs(c);});if(val!==false)toast('Marqué comme publié');}
+function markDone(id,pid,val){if(!can('projStatus')){toast(DENIED);return;}updateContent(id,c=>{const p=c.publications.find(x=>x.id===pid);if(p)p.done=val!==false;syncStatusFromPubs(c);});if(val!==false)toast('Marqué comme publié');}
 function moveEvent(spec,date){
+  if(spec.startsWith('rdv:')?!can('rdv'):!can('calMove')){toast(DENIED);render();return;}
   const [kind,cid,xid,from]=spec.split(':');
   if(kind==='rdv'){const x=S.rdv[cid];if(!x||x.date===date)return;const before=clone(x);Store.saveRdv(Object.assign(clone(x),{date}));logChange('rdv','update',cid,x.title,'Date → '+fmtShort(date),before);toast('Rendez-vous déplacé au '+fmtDay(date));return;}
   if(kind==='shoot'){const delta=diffDays(date,from);if(!delta)return;
@@ -1776,7 +1894,7 @@ function moveEvent(spec,date){
   updateContent(cid,c=>{if(kind==='pub'){const p=c.publications.find(x=>x.id===xid);if(p)p.date=date;}else if(kind==='edit')c.editDate=date;},
     (kind==='pub'?'Date de publication':'Date de montage')+' → '+fmtShort(date));
 }
-function setStatus(id,status){updateContent(id,c=>{c.status=status;if(status==='publie')c.publications.forEach(p=>{p.done=true;});});}
+function setStatus(id,status){if(!can('projStatus')){toast(DENIED);render();return;}updateContent(id,c=>{c.status=status;if(status==='publie')c.publications.forEach(p=>{p.done=true;});});}
 function deleteContent(id){
   const before=S.contents[id];if(!before)return;
   Store.deleteContent(id);logChange('content','delete',id,titleOf(before),'Contenu supprimé',before);
@@ -1855,11 +1973,13 @@ function renderPeek(){
   if(c.notes)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Notes</h3></div><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.notes)+'</p></div>';
   const hist=S.history.filter(e=>e.kind==='content'&&e.refId===c.id).slice(0,4);
   if(hist.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Dernières modifications</h3></div><div class="hist">'+hist.map(histRow).join('')+'</div></div>';
-  h+='</div><div class="peek-f"><button class="btn primary" data-act="peek-edit">'+ICON.edit+'Modifier</button><button class="btn" data-act="peek-dup">'+ICON.copy+'Dupliquer</button>'+(isAdmin()?'<button class="btn danger" data-act="del-content" data-id="'+esc(c.id)+'" data-confirm="Supprimer le contenu ?">'+ICON.trash+'Supprimer</button>':'')+'</div>';
+  h+='</div><div class="peek-f"><button class="btn primary need-projEdit" data-act="peek-edit">'+ICON.edit+'Modifier</button><button class="btn need-projEdit" data-act="peek-dup">'+ICON.copy+'Dupliquer</button>'+(can('projDelete')?'<button class="btn danger" data-act="del-content" data-id="'+esc(c.id)+'" data-confirm="Supprimer le contenu ?">'+ICON.trash+'Supprimer</button>':'')+'</div>';
   panel.innerHTML=h;panel.scrollTop=st;if(fid){const el=document.getElementById(fid);if(el)el.focus({preventScroll:true});}
 }
 $('#peek-panel').addEventListener('change',e=>{
   const el=e.target;if(!peekId)return;const id=peekId;
+  if((el.dataset.pk==='status'||el.dataset.ppf==='done')&&!can('projStatus')){toast(DENIED);renderPeek();return;}
+  if((el.dataset.ppf==='date'||el.dataset.ppf==='time')&&!can('calMove')){toast(DENIED);renderPeek();return;}
   if(el.dataset.pk==='status')setStatus(id,el.value);
   else if(el.dataset.ppf==='done')markDone(id,el.dataset.pid,el.checked);
   else if(el.dataset.ppf==='date'&&isValidDate(el.value))updateContent(id,c=>{const p=c.publications.find(x=>x.id===el.dataset.pid);if(p)p.date=el.value;},'Date de publication → '+fmtShort(el.value));
@@ -1928,7 +2048,7 @@ function renderEditor(){
       '<span class="hint sh-sum" id="sum-'+esc(s.id)+'">'+esc(fmtShoot(s))+'</span></div>').join('')
      :'<p class="hint" style="margin:0">Aucun tournage prévu. Ajoute une session d\'un jour, ou de plusieurs jours avec « Au ». Tu peux en ajouter autant que nécessaire, chacune avec son lieu.</p>')+'</div>';
   h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Production</h2></div><div class="f-grid">'+
-    '<label class="field"><span>Client / boîte</span><select class="inp" id="ed-comp" data-f="companyId"><option value="">Aucun (contenu perso)</option>'+companies().map(k=>'<option value="'+esc(k.id)+'"'+(k.id===c.companyId?' selected':'')+'>'+esc(k.label)+'</option>').join('')+'</select></label>'+
+    '<label class="field"><span>Client</span><select class="inp" id="ed-comp" data-f="companyId"><option value="">Aucun (contenu perso)</option>'+companies().map(k=>'<option value="'+esc(k.id)+'"'+(k.id===c.companyId?' selected':'')+'>'+esc(k.label)+'</option>').join('')+'</select></label>'+
     '<label class="field"><span>Date de montage</span><input class="inp" type="date" id="ed-edit" data-f="editDate" value="'+esc(c.editDate)+'"></label>'+
     '<label class="field wide"><span>Acteurs / participants</span><input class="inp" id="ed-cast" data-f="cast" value="'+esc(c.cast)+'" placeholder="Noms séparés par des virgules"></label>'+
     '<label class="field wide"><span>Matériel nécessaire</span><textarea class="inp" id="ed-gear" data-f="gear" rows="2" placeholder="Caméra, micro-cravate, perche, costume…">'+esc(c.gear)+'</textarea></label></div></div>';
@@ -1943,7 +2063,7 @@ function renderEditor(){
   h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Notes</h2></div><textarea class="inp" id="ed-notes" data-f="notes" rows="4" placeholder="Idées, références, retours…">'+esc(c.notes)+'</textarea></div>';
   const hist=S.history.filter(e=>e.kind==='content'&&e.refId===c.id).slice(0,10);
   h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Historique de ce contenu</h2></div>'+(hist.length?'<div class="hist">'+hist.map(histRow).join('')+'</div>':'<p class="hint" style="margin:0">Les versions précédentes apparaîtront ici après tes modifications.</p>')+'</div>';
-  h+='<div class="ed-foot"><button class="btn" data-act="ed-dup">'+ICON.copy+'Dupliquer</button>'+(S.contents[c.id]&&isAdmin()?'<button class="btn danger" data-act="ed-delete" data-confirm="Supprimer définitivement ?">'+ICON.trash+'Supprimer</button>':'')+'</div>';
+  h+='<div class="ed-foot"><button class="btn" data-act="ed-dup">'+ICON.copy+'Dupliquer</button>'+(S.contents[c.id]&&can('projDelete')?'<button class="btn danger" data-act="ed-delete" data-confirm="Supprimer définitivement ?">'+ICON.trash+'Supprimer</button>':'')+'</div>';
   h+='</div>';
   $('#sheet-panel').innerHTML=h;updateSaved();
   const nb=$('#sheet-panel .sheet-body');if(nb)nb.scrollTop=st;
@@ -1984,7 +2104,7 @@ document.addEventListener('click',e=>{
   if(el.dataset.confirm&&!arm(el)){e.stopPropagation();e.preventDefault();return;}
   const a=el.dataset.act,id=el.dataset.id;
   if(handleBillingClick(a,el,e))return;
-  if(ADMIN_ACTS.includes(a)&&!isAdmin()){toast('Réservé à la vue admin.');return;}
+  if(!actAllowed(a,el))return;
   if(handleV3Click(a,el,e))return;
   switch(a){
     case 'new':openEditor(null,{date:el.dataset.date,status:el.dataset.status});break;
@@ -2070,6 +2190,7 @@ document.addEventListener('change',e=>{
   else if(el.dataset.persoColor){if(!isAdmin())return render();updateSettings(s=>{s.persoColor=el.value;},'Couleur des RDV perso');}
   else if(el.dataset.rdvFilter!==undefined&&el.id==='rdv-filter'){S.ui.rdvFilter=el.value;saveUI();render();}
   else if(el.id==='qi-type'){S.ui.ideaType=el.value;saveUI();}
+  else if(el.dataset.accHandle&&!can('accounts')){render();}
   else if(el.dataset.accHandle){const a=S.accounts[el.dataset.accHandle];const v=normHandle(el.value,a&&a.platform);if(a&&v&&v!==a.handle)updateAccount(a.id,{handle:v},'Nom : '+a.handle+' → '+v);else render();}
   else if(el.dataset.typeLabel||el.dataset.typeColor){const tid=el.dataset.typeLabel||el.dataset.typeColor;const v=el.value.trim();if(el.dataset.typeLabel&&!v)return render();
     updateSettings(s=>{const t=s.types.find(x=>x.id===tid);if(t){if(el.dataset.typeLabel)t.label=v;else t.color=el.value;}},el.dataset.typeLabel?'Format renommé : '+v:'Couleur du format '+typeOf(tid).label);}
@@ -2091,7 +2212,7 @@ document.addEventListener('submit',e=>{
   if(k==='idea'){const v=$('#qi').value.trim();if(!v)return;const c=newContent({title:v,type:$('#qi-type').value,status:'idee'});c.scenes=[{id:uid(),heading:'Scène 1',body:''}];
     c.author=ROLE;c.authorName=roleName(ROLE);c.ideaState=isAdmin()?'validee':'proposee';
     Store.saveContent(c);logChange('content','create',c.id,v,isAdmin()?'Idée ajoutée':'Idée proposée',null);$('#qi').value='';toast(isAdmin()?'Idée ajoutée aux validées':'Idée proposée');}
-  else if(k==='acc'){if(addAccount(q('plat').value,q('handle').value,q('nat').value)){q('handle').value='';}}
+  else if(k==='acc'){if(!can('accounts')){toast(DENIED);return;}if(addAccount(q('plat').value,q('handle').value,q('nat').value)){q('handle').value='';}}
   else if(k==='type'){const v=$('#type-new').value.trim();if(!v)return;const pal=['#E4572E','#7B2CBF','#0F7B6C','#2E86AB','#D81E5B','#5465FF','#2B9348','#B5651D'];
     updateSettings(s=>{s.types.push({id:'t'+uid(),label:v,color:pal[s.types.length%pal.length]});},'Format ajouté : '+v);$('#type-new').value='';toast('Format « '+v+' » ajouté');}
   else if(k==='theme'){const v=$('#theme-new').value.trim();if(!v)return;updateSettings(s=>{s.themes.push({id:'th'+uid(),label:v});},'Thématique ajoutée : '+v);$('#theme-new').value='';toast('Thématique « '+v+' » ajoutée');}
