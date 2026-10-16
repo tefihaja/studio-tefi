@@ -1,5 +1,5 @@
 -- =====================================================================
---  Studio Tefi · installation Supabase (version 5.1)
+--  Studio Tefi · installation Supabase (version 6.0)
 --  À coller en entier dans Supabase → SQL Editor → New query → Run.
 --  Le script peut être relancé sans risque : il ne supprime aucune donnée.
 -- =====================================================================
@@ -38,7 +38,7 @@ where id = (select id from public.profiles order by created_at limit 1)
 
 -- 2. Données de l'appli ----------------------------------------------------
 create table if not exists public.items (
-  col         text not null check (col in ('contents','accounts','rdv','docs','media','deals','contacts','history')),
+  col         text not null,
   id          text not null,
   data        jsonb not null default '{}'::jsonb,
   deleted     boolean not null default false,
@@ -47,6 +47,9 @@ create table if not exists public.items (
   primary key (col, id)
 );
 create index if not exists items_col_updated on public.items (col, updated_at desc);
+-- Types d'éléments autorisés (mis à jour en 6.0 : tâches et demandes)
+alter table public.items drop constraint if exists items_col_check;
+alter table public.items add constraint items_col_check check (col in ('contents','accounts','rdv','docs','media','deals','contacts','history','tasks','requests'));
 
 create table if not exists public.app_settings (
   id          text primary key default 'main' check (id = 'main'),
@@ -77,7 +80,7 @@ returns boolean language sql stable security definer set search_path = public as
       ('{"projEdit":true,"projStatus":true,"projDelete":false,"projection":true,"budget":true,"calMove":true,
          "ideaDeleteOwn":true,"accounts":true,"stats":true,"rdv":true,"clients":true,"devis":true,"factures":true,
          "toCollect":true,"suivis":true,"payStatus":true,"entreprises":true,"prestaEdit":false,"collabs":true,
-         "contacts":true,"history":false}'::jsonb ->> k)::boolean,
+         "contacts":true,"history":false,"requests":true}'::jsonb ->> k)::boolean,
       false)
   end
 $$;
@@ -95,6 +98,7 @@ returns boolean language sql stable security definer set search_path = public as
     when c = 'deals'    then public.perm('collabs')
     when c = 'contacts' then public.perm('contacts')
     when c = 'history'  then public.perm('history')
+    when c in ('tasks','requests') then true
     else false
   end
 $$;
@@ -118,6 +122,12 @@ begin
               and coalesce(new.data ->> 'status', '') = 'idee'
               and coalesce(new.data ->> 'ideaState', '') <> 'validee';
 
+  -- Seule l'admin signe les devis et factures (l'assistante peut seulement retirer une signature en modifiant le document)
+  if new.col = 'docs' and coalesce(jsonb_typeof(new.data -> 'signed'), 'null') <> 'null'
+     and (tg_op = 'INSERT' or (new.data -> 'signed') is distinct from (old.data -> 'signed')) then
+    raise exception 'Seule l''admin peut signer un document' using errcode = '42501';
+  end if;
+
   -- Seule l'admin valide les idées
   if new.col = 'contents' and coalesce(new.data ->> 'ideaState','') = 'validee'
      and (tg_op = 'INSERT' or coalesce(old.data ->> 'ideaState','') <> 'validee')
@@ -139,6 +149,8 @@ begin
       when 'media'    then public.perm('projection')
       when 'deals'    then public.perm('collabs')
       when 'contacts' then public.perm('contacts')
+      when 'tasks'    then true
+      when 'requests' then public.perm('requests')
       else false end;
   else
     ok := case new.col
@@ -150,6 +162,8 @@ begin
       when 'media'    then public.perm('projection')
       when 'deals'    then public.perm('collabs')
       when 'contacts' then public.perm('contacts')
+      when 'tasks'    then coalesce(new.data ->> 'owner','') <> 'admin' or coalesce(new.data ->> 'assignedBy','') = 'admin'
+      when 'requests' then public.perm('requests')
       else false end;
   end if;
   if not ok then raise exception 'Action non autorisée pour l''assistante' using errcode = '42501'; end if;
@@ -174,7 +188,10 @@ begin
      or (new.data -> 'pinHash') is distinct from (old.data -> 'pinHash')
      or (new.data -> 'profiles') is distinct from (old.data -> 'profiles')
      or (new.data -> 'assistantName') is distinct from (old.data -> 'assistantName')
-     or (new.data -> 'uiThemes') is distinct from (old.data -> 'uiThemes') then
+     or (new.data -> 'uiThemes') is distinct from (old.data -> 'uiThemes')
+     or (new.data -> 'signature') is distinct from (old.data -> 'signature')
+     or (new.data -> 'showAssistPlan') is distinct from (old.data -> 'showAssistPlan')
+     or (new.data -> 'homeLayout' -> 'admin') is distinct from (old.data -> 'homeLayout' -> 'admin') then
     raise exception 'Réglage réservé à l''admin' using errcode = '42501';
   end if;
   if (new.data -> 'companies') is distinct from (old.data -> 'companies') and not public.perm('clients') then
@@ -224,7 +241,9 @@ drop policy if exists items_read   on public.items;
 drop policy if exists items_insert on public.items;
 drop policy if exists items_update on public.items;
 drop policy if exists items_delete on public.items;
-create policy items_read   on public.items for select to authenticated using (public.can_read(col));
+create policy items_read   on public.items for select to authenticated using (
+  public.can_read(col)
+  and not (col = 'tasks' and coalesce((data ->> 'private')::boolean, false) and coalesce(data ->> 'ownerUid','') <> auth.uid()::text));
 create policy items_insert on public.items for insert to authenticated with check (public.is_member() and (col = 'history' or public.can_read(col)));
 create policy items_update on public.items for update to authenticated using (public.can_read(col)) with check (public.can_read(col));
 create policy items_delete on public.items for delete to authenticated using (public.my_role() = 'admin');
@@ -249,12 +268,15 @@ drop policy if exists "studio photos read"   on storage.objects;
 drop policy if exists "studio photos add"    on storage.objects;
 drop policy if exists "studio photos change" on storage.objects;
 drop policy if exists "studio photos remove" on storage.objects;
+-- admin/  : signature et cachets, lisibles par l'admin seulement
+-- signed/ : PDF signés, lisibles par l'équipe mais créés par l'admin seulement
 create policy "studio photos read"   on storage.objects for select to authenticated
-  using (bucket_id = 'photos' and public.is_member());
+  using (bucket_id = 'photos' and public.is_member() and (name not like 'admin/%' or public.my_role() = 'admin'));
 create policy "studio photos add"    on storage.objects for insert to authenticated
-  with check (bucket_id = 'photos' and public.is_member());
+  with check (bucket_id = 'photos' and public.is_member() and ((name not like 'admin/%' and name not like 'signed/%') or public.my_role() = 'admin'));
 create policy "studio photos change" on storage.objects for update to authenticated
-  using (bucket_id = 'photos' and public.is_member()) with check (bucket_id = 'photos' and public.is_member());
+  using (bucket_id = 'photos' and public.is_member() and ((name not like 'admin/%' and name not like 'signed/%') or public.my_role() = 'admin'))
+  with check (bucket_id = 'photos' and public.is_member() and ((name not like 'admin/%' and name not like 'signed/%') or public.my_role() = 'admin'));
 create policy "studio photos remove" on storage.objects for delete to authenticated
   using (bucket_id = 'photos' and public.my_role() = 'admin');
 
