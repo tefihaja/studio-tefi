@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Studio Tefi · version 4.0 · 16 octobre 2026 -->
+<!-- Studio Tefi · version 5.0 · 16 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -378,6 +378,10 @@ body[data-role="assistant"] .strip .is-today{background:var(--accent);border-col
 body.gated .nav,body.gated .fab{display:none}
 body.gated .app{grid-template-columns:minmax(0,1fr)}
 .gate{max-width:520px;margin:6vh auto 0;display:flex;flex-direction:column;gap:18px}
+.supa-form{display:flex;flex-direction:column;gap:12px}.supa-form h2{margin:0}.supa-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.supa-err{margin:0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--late) 12%,transparent);color:var(--late);font-size:14px}
+.supa-banner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-color:var(--accent)}
+.supa-accounts{display:flex;flex-direction:column;gap:8px}.supa-acc{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.supa-acc>span{min-width:0;overflow-wrap:anywhere}.supa-acc select{width:auto}
 .gate-brand{display:flex;align-items:center;gap:12px}
 .gate-brand .brand-mark{width:44px;height:44px;font-size:22px;border-radius:12px}
 .gate-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -507,6 +511,11 @@ span.tc{cursor:default}
 </style>
 
 
+<script>
+/* Comptes en ligne Studio Tefi (Supabase). La clé ci-dessous est la clé PUBLIQUE (publishable) : elle peut être visible, la sécurité est assurée par les règles de la base. Ne mets JAMAIS la clé « secret » ou « service_role » ici. */
+window.STUDIO_SUPA={url:'https://yqtzbwgjilyemvbtgbzg.supabase.co',key:'sb_publishable_9z5Nt-dq_dEJxFiHmMIpLw_sIm3_qAL',
+  lib:['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js','https://unpkg.com/@supabase/supabase-js@2.49.4/dist/umd/supabase.js']};
+</script>
 </head>
 <body>
 <div class="app">
@@ -544,8 +553,9 @@ span.tc{cursor:default}
 (function(){
 "use strict";
 /* ================= Constantes ================= */
-const APP_VERSION='4.0';
+const APP_VERSION='5.0';
 const VERSIONS=[
+  {v:'5.0',date:'2026-10-16',items:['Version GitHub : vrais comptes en ligne (Supabase) avec e-mail et mot de passe, pour toi et ton assistante','Sécurité côté serveur : les autorisations de l\'assistante sont vérifiées par la base, plus seulement par l\'écran','Mise à jour en direct sur tous les appareils, et changements gardés en attente hors connexion','Photos rangées dans un espace de stockage privé','Réglages → Comptes : valider ou couper l\'accès d\'un compte','Reprise en un clic des données et photos de l\'ancienne version']},
   {v:'4.0',date:'2026-10-16',items:[
     "Nouvel onglet Projection : rushs à télécharger, versions à valider (liens vidéo, photos déposées ou liens), lecteur intégré, retours minutés ou repères sur photo, cases à cocher, rapport de corrections en PDF, validation → « Prêt à publier »",
     "Synchro GitHub fiable à deux : fusion élément par élément, plus de modification perdue, sauvegarde automatique chaque semaine",
@@ -747,27 +757,29 @@ function localPayload(){pruneTombs();const o={settings:S.settings,history:S.hist
 function persistLocal(){if(S.mode!=='local')return;if(!lsSet(LS_DATA,localPayload()))toast("Stockage du navigateur plein : exporte une sauvegarde.");Sync.schedulePush();}
 const Store={
   save(col,obj){const x=clone(obj);x.updatedAt=Date.now();S[col][x.id]=col==='contents'?normContent(x):x;delete S.deleted[col+':'+x.id];
-    if(S.mode==='cloud')enqueue(COLS[col]+':'+x.id,()=>DB.collection(col).doc(x.id).set(clone(S[col][x.id])));else persistLocal();scheduleRender();},
-  del(col,id){delete S[col][id];S.deleted[col+':'+id]=Date.now();
-    if(S.mode==='cloud')enqueue(COLS[col]+':'+id,()=>DB.collection(col).doc(id).delete());else persistLocal();scheduleRender();},
+    if(S.mode==='cloud')enqueue(COLS[col]+':'+x.id,()=>DB.collection(col).doc(x.id).set(clone(S[col][x.id])));else if(S.mode==='supa')Supa.put(col,x.id,S[col][x.id],false);else persistLocal();scheduleRender();},
+  del(col,id){const was=S[col][id];delete S[col][id];S.deleted[col+':'+id]=Date.now();
+    if(S.mode==='cloud')enqueue(COLS[col]+':'+id,()=>DB.collection(col).doc(id).delete());else if(S.mode==='supa')Supa.put(col,id,was,true);else persistLocal();scheduleRender();},
   saveContent(c){this.save('contents',c);},deleteContent(id){this.del('contents',id);},
   saveAccount(a){this.save('accounts',a);},deleteAccount(id){this.del('accounts',id);},
   saveRdv(x){this.save('rdv',x);},deleteRdv(id){this.del('rdv',id);},
   saveSettings(s){S.settings=clone(s);S.settings.updatedAt=Date.now();
-    if(S.mode==='cloud')enqueue('settings',()=>DB.doc('settings/main').set(clone(S.settings)));else persistLocal();scheduleRender();},
+    if(S.mode==='cloud')enqueue('settings',()=>DB.doc('settings/main').set(clone(S.settings)));else if(S.mode==='supa')Supa.setSettings(S.settings);else persistLocal();scheduleRender();},
   addHistory(e){
     S.history=[e].concat(S.history.filter(x=>x.id!==e.id));
     if(S.mode==='cloud'){
       enqueue('h:'+e.id,()=>DB.collection('history').doc(e.id).set(e));
       const extra=S.history.slice(HMAX_CLOUD);S.history=S.history.slice(0,HMAX_CLOUD);
       extra.forEach(x=>enqueue('h:'+x.id,()=>DB.collection('history').doc(x.id).delete()));
-    }else{S.history=S.history.slice(0,HMAX_LOCAL);persistLocal();}
+    }else if(S.mode==='supa'){Supa.hist(e);S.history=S.history.slice(0,HMAX_CLOUD);}
+    else{S.history=S.history.slice(0,HMAX_LOCAL);persistLocal();}
   }
 };
 function logChange(kind,action,refId,label,summary,before){
   Store.addHistory({id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:Date.now(),kind,action,refId:refId||'',label:label||'',summary:summary||'',by:ROLE==='assistant'?roleName('assistant'):'Admin',before:before?clone(before):null});
 }
 async function startStore(){
+  if(Supa.enabled()&&await Supa.start()){renderSync();scheduleRender();return;}
   let db=null;
   if(window.claude&&typeof window.claude.use==='function'){try{db=await window.claude.use('db');}catch(e){db=null;}}
   if(db){
@@ -807,6 +819,7 @@ function afterLoad(){if(!hashView&&!Object.keys(S.accounts).length){S.ui.view='n
 function renderSync(){
   const el=$('#sync');
   if(S.mode==='cloud'){el.className='sync cloud';el.innerHTML='<i></i><span>Synchronisé sur tous tes appareils · v'+APP_VERSION+'</span>';}
+  else if(S.mode==='supa'){el.className='sync '+(['offline','error'].includes(Supa.state)?'local':'cloud');el.innerHTML='<i></i><span>'+esc(ROLE?Supa.label():'Compte en ligne')+' · v'+APP_VERSION+'</span>';}
   else if(S.mode==='local'){
     if(Sync.cfg&&Sync.cfg.gistId){el.className='sync '+(Sync.state==='error'?'local':'cloud');el.innerHTML='<i></i><span>'+esc(Sync.label())+' · v'+APP_VERSION+'</span>';}
     else{el.className='sync local';el.innerHTML='<i></i><span>Enregistré sur cet appareil seulement. Active la synchro GitHub dans Réglages. · v'+APP_VERSION+'</span>';}
@@ -1275,7 +1288,7 @@ function viewSettings(){
   h+='</div>';
   h+='<section class="panel"><div class="panel-h"><h2>Vues &amp; accès</h2></div><div class="f-grid">'+
     '<label class="field"><span>Prénom de l\'assistante</span><input class="inp" id="asst-name" value="'+esc(st.assistantName)+'" placeholder="Assistante" data-asst-name="1"></label>'+
-    '<form class="field" data-form="pin" style="grid-column:span 2"><span>Changer le code PIN admin</span><div class="link-line"><input class="inp pin" id="pin-new" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••" aria-label="Nouveau code PIN"><button class="btn" type="submit">Enregistrer</button></div></form></div>'+
+    (S.mode==='supa'?'</div>':'<form class="field" data-form="pin" style="grid-column:span 2"><span>Changer le code PIN admin</span><div class="link-line"><input class="inp pin" id="pin-new" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••" aria-label="Nouveau code PIN"><button class="btn" type="submit">Enregistrer</button></div></form></div>')+
     '<p class="hint" style="margin:10px 0 0">La vue assistante ne peut pas supprimer de projet, valider des idées, toucher aux plateformes, aux formats, aux boîtes ni à ces réglages. Le code PIN protège l\'interface, pas les données : partage ton jeton GitHub seulement avec une personne de confiance.</p></section>';
   h+=permsPanel();
   h+=templatesPanel();
@@ -1283,7 +1296,8 @@ function viewSettings(){
   h+='<section class="panel"><div class="panel-h"><h2>Rappels</h2></div>'+notifBox()+'</section>';
   // Synchro & sauvegarde
   h+='<section class="panel"><div class="panel-h"><h2>Synchronisation &amp; sauvegarde</h2></div>';
-  if(S.mode==='cloud'){
+  if(S.mode==='supa'){h+=Supa.panel()+'<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">';}
+  else if(S.mode==='cloud'){
     h+='<p class="muted" style="margin:0 0 12px">Tes données sont synchronisées automatiquement entre ton téléphone, ta tablette et ton ordinateur. L\'export te donne une copie de sécurité en plus, que tu peux importer dans la version GitHub.</p>';
   }else{
     const c=Sync.cfg;
@@ -1327,6 +1341,7 @@ async function hashPin(pin){const txt='studio-tefi:'+pin;
   catch(e){let h=5381;for(const ch of txt)h=((h<<5)+h+ch.charCodeAt(0))|0;return 'w'+(h>>>0).toString(16);}}
 function setRole(r,remember){ROLE=r;ssSet(SS_ROLE,r);if(r==='assistant')lsSet(LS_ROLE,'assistant');else if(r==='admin')lsSet(LS_ROLE,remember?{role:'admin',until:Date.now()+30*864e5}:null);gateStep='choose';if(r!=='admin'&&S.ui.view==='settings')S.ui.view='home';render();window.scrollTo(0,0);if(r)toast(r==='admin'?'Vue admin ouverte':'Vue '+roleName('assistant')+' ouverte');}
 function viewGate(){
+  if(S.mode==='supa')return Supa.gate();
   let h='<div class="gate"><div class="gate-brand"><div class="brand-mark">T</div><div><h1>Studio Tefi</h1><span class="muted">Qui utilise l\'appli sur cet appareil ?</span></div></div>';
   if(gateStep==='choose'){
     h+='<div class="gate-choices"><button class="gate-choice" data-act="gate-admin" style="--c:#4636D9"><i></i><b>Admin</b><span class="muted">Accès complet. Protégé par ton code PIN.</span></button>'+
@@ -1344,6 +1359,7 @@ function viewGate(){
   return h+'</div>';
 }
 function syncBox(){
+  if(S.mode==='supa')return Supa.panel();
   if(S.mode==='cloud')return '<p class="muted" style="margin:0">Données synchronisées automatiquement sur tous les appareils connectés à ce lien.</p>';
   const c=Sync.cfg;
   if(c&&c.gistId)return '<div class="sync-box"><p style="margin:0"><b>'+esc(Sync.label())+'</b>'+(Sync.state==='error'&&Sync.err?' · <span style="color:var(--late)">'+esc(Sync.err)+'</span>':'')+'</p>'+
@@ -1355,7 +1371,7 @@ function syncBox(){
 function viewMore(){
   let h='<div class="wrap"><div class="head"><div><span class="label">Plus</span><h1>Menu</h1></div><span class="pill plain">Version '+APP_VERSION+'</span></div>';
   h+='<div class="more-list"><button class="btn" data-nav="search">Rechercher</button><button class="btn" data-nav="ideas">Idées'+(ideasToHandle().length?' · '+ideasToHandle().length:'')+'</button><button class="btn" data-nav="networks">Réseaux &amp; distribution</button>'+(isAdmin()?'<button class="btn" data-nav="settings">Réglages, historique et versions</button>':'')+
-    '<button class="btn" data-act="switch-role">Changer de vue · actuellement '+esc(roleName(ROLE))+'</button></div>';
+    '<button class="btn" data-act="switch-role">'+(S.mode==='supa'?'Se déconnecter · '+esc(roleName(ROLE)):'Changer de vue · actuellement '+esc(roleName(ROLE)))+'</button></div>';
   h+='<section class="panel"><div class="panel-h"><h2>Synchronisation</h2></div>'+syncBox()+'</section>';
   h+='<section class="panel"><div class="panel-h"><h2>Rappels</h2></div>'+notifBox()+'</section>';
   if(!isAdmin()&&can('history'))h+=historyPanel();
@@ -1426,6 +1442,7 @@ function deleteRdv(id){const before=S.rdv[id];if(!before)return;Store.deleteRdv(
 /* ================= Actions v3 ================= */
 function handleV3Click(a,el,e){
   const id=el.dataset.id;
+  if(S.mode==='supa'){if(Supa.click(a,el))return true;if(a==='switch-role'){if(confirm('Se déconnecter de Studio Tefi sur cet appareil ?'))Supa.signOut();return true;}}
   switch(a){
     case 'gate-admin':gateStep='pin';render();return true;
     case 'gate-assistant':setRole('assistant');return true;
@@ -1459,6 +1476,7 @@ function handleV3Click(a,el,e){
   return false;
 }
 function handleV3Submit(k,f){
+  if(S.mode==='supa'&&Supa.submit(k))return true;
   if(k==='gate-pin'){(async()=>{
       const v=($('#gate-pin').value||'').trim();const has=!!settings().pinHash;
       if(!/^\d{4,}$/.test(v)){toast('Le code doit contenir au moins 4 chiffres.');return;}
@@ -2119,11 +2137,12 @@ function compressImage(file,max){return new Promise((res,rej)=>{const fr=new Fil
 const MediaStore={cache:{},loading:{},
   async put(id,blob){
     if(S.mode==='cloud'){let as=null;try{as=await window.claude.use('assets');}catch(e){as=null;}if(as){const r=await as.upload(blob);return {store:'asset',ref:r.url,aid:r.id};}}
+    if(S.mode==='supa')return await Supa.upload(id,blob);
     const dataUrl=await blobToDataUrl(blob);
     if(S.mode==='local'&&Sync.cfg&&Sync.cfg.gistId){const name='photo-'+id+'.txt';Sync.pendingFiles[name]=dataUrl;this.cache['g:'+name]=dataUrl;Sync.schedulePush();return {store:'gist',ref:name};}
     await idbPut(id,dataUrl);this.cache['i:'+id]=dataUrl;return {store:'idb',ref:id};
   },
-  url(p){if(!p)return '';if(p.store==='asset')return p.ref;const key=(p.store==='gist'?'g:':'i:')+p.ref;if(this.cache[key])return this.cache[key];
+  url(p){if(!p)return '';if(p.store==='asset')return p.ref;if(p.store==='supa')return S.mode==='supa'?Supa.photoUrl(p.ref):'';const key=(p.store==='gist'?'g:':'i:')+p.ref;if(this.cache[key])return this.cache[key];
     if(!this.loading[key]){this.loading[key]=true;(async()=>{try{if(p.store==='gist'){const u=Sync.files[p.ref];if(!u){this.loading[key]=false;return;}this.cache[key]=await (await fetch(u,{cache:'force-cache'})).text();}else this.cache[key]=await idbGet(p.ref);if(this.cache[key])scheduleRender();}catch(e){this.loading[key]=false;}})();}
     return '';}
 };
@@ -2731,6 +2750,240 @@ function viewSearch(){
   return h+'</div>';
 }
 
+/* ================= Comptes en ligne (Supabase · version GitHub) ================= */
+const SUPA_CFG=window.STUDIO_SUPA||null;
+const LS_SUPA_OUT='studio-tefi-supa-outbox',LS_SUPA_CACHE='studio-tefi-supa-cache';
+const SUPA_ROLES={admin:'Admin',assistant:'Assistante',pending:'En attente',blocked:'Bloqué'};
+const Supa={
+  sb:null,user:null,profile:null,step:'loading',err:'',info:'',state:'off',out:{},flushT:null,busy:false,ch:null,lastAt:0,lastFetch:0,empty:false,profiles:null,cacheT:null,retryT:null,
+  enabled(){return !!(SUPA_CFG&&SUPA_CFG.url&&SUPA_CFG.key&&!(window.claude&&window.claude.use));},
+  label(){return this.state==='offline'?'Hors ligne : tes changements partiront au retour du réseau':this.state==='sending'?'Enregistrement…':this.state==='error'?'Synchro en erreur':this.lastAt?'Synchronisé à '+pad(new Date(this.lastAt).getHours())+':'+pad(new Date(this.lastAt).getMinutes()):'Synchronisé en direct';},
+  setState(s){this.state=s;renderSync();},
+  async loadLib(){
+    if(window.supabase&&window.supabase.createClient)return true;
+    const urls=(SUPA_CFG.lib||[]);
+    for(const u of urls){const ok=await new Promise(res=>{const s=document.createElement('script');s.src=u;s.onload=()=>res(true);s.onerror=()=>res(false);document.head.appendChild(s);});if(ok&&window.supabase&&window.supabase.createClient)return true;}
+    return false;
+  },
+  /* Démarrage : renvoie false si Supabase n'est pas utilisable (on retombe alors sur le mode appareil) */
+  async start(){
+    if(!(await this.loadLib()))return false;
+    try{this.sb=window.supabase.createClient(SUPA_CFG.url,SUPA_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'studio-tefi-auth'}});}catch(e){return false;}
+    S.mode='supa';ROLE='';S.loaded=true;this.out=lsGet(LS_SUPA_OUT)||{};
+    if(/type=recovery/.test(location.hash))this.step='recover';
+    this.sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>{
+      if(ev==='PASSWORD_RECOVERY'){this.step='recover';render();return;}
+      if(ev==='SIGNED_OUT'){this.reset();return;}
+      if(session&&session.user&&(!this.user||this.user.id!==session.user.id)&&this.step!=='recover')this.onSession(session);
+    },0);});
+    let session=null;try{const r=await this.sb.auth.getSession();session=r.data&&r.data.session;}catch(e){}
+    if(session&&this.step!=='recover')await this.onSession(session);else if(this.step!=='recover'){this.step='login';render();}
+    window.addEventListener('online',()=>{this.flush();this.refresh();});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ROLE&&Date.now()-this.lastFetch>60000)this.refresh();else if(document.visibilityState==='hidden')this.flush();});
+    return true;
+  },
+  reset(){this.user=null;this.profile=null;this.profiles=null;ROLE='';if(this.ch){try{this.sb.removeChannel(this.ch);}catch(e){}this.ch=null;}
+    Object.keys(COLS).forEach(c=>{S[c]={};});S.settings=null;S.history=[];this.step='login';this.setState('off');render();},
+  async onSession(session){
+    this.user=session.user;this.step='loading';render();
+    let p=null,err=null;
+    try{const r=await this.sb.from('profiles').select('*').eq('id',this.user.id).maybeSingle();p=r.data;err=r.error;}catch(e){err=e;}
+    const cache=lsGet(LS_SUPA_CACHE);
+    if(err&&!p){
+      if(cache&&cache.uid===this.user.id&&cache.role&&isNetErr(err)){p={id:this.user.id,email:this.user.email,role:cache.role};this.setState('offline');}
+      else{this.step='error';this.err=/profiles|relation|schema/i.test(errMsg(err))?'La base n\'est pas encore installée : lance le script supabase-setup.sql dans Supabase.':'Connexion impossible : '+errMsg(err);render();return;}
+    }
+    if(!p){this.step='error';this.err='Profil introuvable. Lance (ou relance) le script supabase-setup.sql dans Supabase, puis reconnecte-toi.';render();return;}
+    this.profile=p;
+    if(!['admin','assistant'].includes(p.role)){this.step=p.role==='blocked'?'blocked':'pending';render();return;}
+    ROLE=p.role;this.step='in';
+    if(cache&&cache.uid===this.user.id&&cache.data){applyLocal(cache.data);this.applyOut();}
+    afterLoad();render();
+    await this.refresh(true);
+    this.listen();this.flush();
+  },
+  async fetchAll(){
+    const rows=[];let from=0;const N=1000;
+    for(;;){const r=await this.sb.from('items').select('col,id,data,deleted,updated_at').neq('col','history').eq('deleted',false).order('col').order('id').range(from,from+N-1);
+      if(r.error)throw r.error;rows.push(...r.data);if(r.data.length<N)break;from+=N;}
+    const hr=await this.sb.from('items').select('id,data').eq('col','history').order('updated_at',{ascending:false}).limit(HMAX_CLOUD);
+    const st=await this.sb.from('app_settings').select('data').eq('id','main').maybeSingle();
+    if(st.error)throw st.error;
+    return {rows,hist:hr.error?[]:hr.data,settings:st.data?st.data.data:null};
+  },
+  async refresh(first){
+    if(!this.sb||!ROLE)return;
+    try{const d=await this.fetchAll();this.lastFetch=Date.now();
+      Object.keys(COLS).forEach(c=>{S[c]={};});
+      d.rows.forEach(r=>{if(!COLS[r.col])return;const x=Object.assign({},r.data,{id:r.id});S[r.col][r.id]=r.col==='contents'?normContent(x):x;});
+      S.settings=d.settings;S.history=d.hist.map(h=>Object.assign({},h.data,{id:h.id})).sort((a,b)=>(b.at||0)-(a.at||0));
+      this.empty=!d.rows.length&&!d.settings;
+      this.applyOut();this.lastAt=Date.now();if(this.state!=='sending')this.setState('ok');this.saveCache();
+      if(first)afterLoad();scheduleRender();
+    }catch(e){this.setState(isNetErr(e)?'offline':'error');this.err=errMsg(e);if(!isNetErr(e))toast('Synchro : '+this.err);}
+  },
+  /* Les changements pas encore envoyés restent prioritaires à l'affichage */
+  applyOut(){Object.values(this.out).forEach(o=>{
+    if(o.settings){S.settings=o.settings;return;}
+    if(o.col==='history'){if(!S.history.some(h=>h.id===o.id))S.history.unshift(o.data);return;}
+    if(!COLS[o.col])return;if(o.deleted)delete S[o.col][o.id];else S[o.col][o.id]=o.col==='contents'?normContent(clone(o.data)):clone(o.data);});},
+  listen(){
+    if(this.ch)return;
+    this.ch=this.sb.channel('studio-tefi')
+      .on('postgres_changes',{event:'*',schema:'public',table:'items'},p=>this.onRow(p))
+      .on('postgres_changes',{event:'*',schema:'public',table:'app_settings'},p=>{if(p.new&&p.new.data&&!this.out.settings){S.settings=p.new.data;this.lastAt=Date.now();renderSync();this.saveCache();scheduleRender();}})
+      .subscribe(status=>{if(status==='SUBSCRIBED'){if(this.wasDown){this.wasDown=false;this.refresh();}}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){this.wasDown=true;}});
+  },
+  onRow(p){
+    const r=p.eventType==='DELETE'?p.old:p.new;if(!r||!r.col||!r.id)return;
+    const key=r.col+':'+r.id;if(this.out[key])return;
+    if(r.col==='history'){if(p.eventType!=='DELETE'&&r.data&&!S.history.some(h=>h.id===r.id)){S.history.unshift(Object.assign({},r.data,{id:r.id}));S.history=S.history.slice(0,HMAX_CLOUD);}}
+    else if(!COLS[r.col])return;
+    else if(p.eventType==='DELETE'||r.deleted)delete S[r.col][r.id];
+    else{const x=Object.assign({},r.data,{id:r.id});S[r.col][r.id]=r.col==='contents'?normContent(x):x;}
+    this.lastAt=Date.now();renderSync();this.saveCache();scheduleRender();
+  },
+  saveCache(){clearTimeout(this.cacheT);this.cacheT=setTimeout(()=>{if(this.user&&ROLE)lsSet(LS_SUPA_CACHE,{uid:this.user.id,role:ROLE,data:localPayload()});},1500);},
+  /* ----- Écritures : regroupées et envoyées par lots, gardées en attente hors ligne ----- */
+  queue(key,o){this.out[key]=o;lsSet(LS_SUPA_OUT,this.out);this.saveCache();clearTimeout(this.flushT);this.flushT=setTimeout(()=>this.flush(),400);},
+  put(col,id,data,deleted){this.queue(col+':'+id,{col,id,data:clone(data||{}),deleted:!!deleted});},
+  hist(e){this.queue('history:'+e.id,{col:'history',id:e.id,data:clone(e)});},
+  setSettings(s){this.queue('settings',{settings:clone(s)});},
+  async send(list){
+    const items=list.filter(o=>o.col&&o.col!=='history').map(o=>({col:o.col,id:o.id,data:o.data,deleted:o.deleted}));
+    const hist=list.filter(o=>o.col==='history').map(o=>({col:'history',id:o.id,data:o.data}));
+    const st=list.find(o=>o.settings);
+    if(st){const r=await this.sb.from('app_settings').upsert({id:'main',data:st.settings},{onConflict:'id'});if(r.error)throw r.error;}
+    for(let i=0;i<items.length;i+=400){const r=await this.sb.from('items').upsert(items.slice(i,i+400),{onConflict:'col,id'});if(r.error)throw r.error;}
+    if(hist.length){const r=await this.sb.from('items').upsert(hist,{onConflict:'col,id',ignoreDuplicates:true});if(r.error)throw r.error;}
+  },
+  async flush(){
+    if(!this.sb||!ROLE||this.busy)return;const keys=Object.keys(this.out);if(!keys.length)return;
+    clearTimeout(this.flushT);clearTimeout(this.retryT);this.busy=true;this.setState('sending');
+    const snap={};keys.forEach(k=>{snap[k]=this.out[k];});
+    const done=k=>{if(this.out[k]===snap[k])delete this.out[k];};
+    try{await this.send(keys.map(k=>snap[k]));keys.forEach(done);this.lastAt=Date.now();this.setState('ok');}
+    catch(e){
+      if(isNetErr(e)){this.setState('offline');this.retryT=setTimeout(()=>this.flush(),15000);}
+      else{ /* Un élément refusé : on envoie un par un pour garder ceux qui passent */
+        let refused=0,msg=errMsg(e);
+        for(const k of keys){try{await this.send([snap[k]]);done(k);}catch(e2){if(isNetErr(e2)){this.setState('offline');break;}refused++;msg=errMsg(e2);done(k);}}
+        if(refused){toast('Refusé par la sécurité du compte : '+msg);this.refresh();}
+        if(this.state!=='offline')this.setState('ok');
+      }
+    }
+    lsSet(LS_SUPA_OUT,this.out);this.busy=false;
+    if(Object.keys(this.out).length&&this.state==='ok'){this.flushT=setTimeout(()=>this.flush(),400);}
+  },
+  /* ----- Photos ----- */
+  urls:{},
+  async upload(id,blob){const path=id+'.jpg';const r=await this.sb.storage.from('photos').upload(path,blob,{contentType:'image/jpeg',upsert:true});if(r.error)throw r.error;return {store:'supa',ref:path};},
+  photoUrl(ref){const c=this.urls[ref];if(c&&c.u&&c.exp>Date.now())return c.u;
+    if(!c||!c.loading){this.urls[ref]={loading:true};(async()=>{try{const r=await this.sb.storage.from('photos').createSignedUrl(ref,6*3600);if(r.error)throw r.error;this.urls[ref]={u:r.data.signedUrl,exp:Date.now()+5*3600e3};scheduleRender();}catch(e){setTimeout(()=>{delete this.urls[ref];},30000);}})();}
+    return '';},
+  /* ----- Comptes ----- */
+  async signIn(email,pw){this.info='';const r=await this.sb.auth.signInWithPassword({email,password:pw});if(r.error){this.err=authMsg(r.error);render();}},
+  async signUp(email,pw){const r=await this.sb.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(r.error){this.err=authMsg(r.error);render();return;}
+    if(!r.data.session){this.step='sent';this.info=email;render();}},
+  async forgot(email){const r=await this.sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(r.error){this.err=authMsg(r.error);render();return;}this.step='sentreset';this.info=email;render();},
+  async newPassword(pw){const r=await this.sb.auth.updateUser({password:pw});if(r.error){this.err=authMsg(r.error);render();return;}
+    history.replaceState(null,'',location.pathname);toast('Nouveau mot de passe enregistré');this.step='loading';const s=await this.sb.auth.getSession();if(s.data.session)this.onSession(s.data.session);else{this.step='login';render();}},
+  async signOut(){await this.flush();try{await this.sb.auth.signOut();}catch(e){}try{localStorage.removeItem(LS_SUPA_CACHE);}catch(e){}this.reset();},
+  async loadProfiles(){const r=await this.sb.from('profiles').select('*').order('created_at');if(!r.error){this.profiles=r.data;scheduleRender();}else toast('Comptes : '+errMsg(r.error));},
+  async setProfileRole(id,role){const r=await this.sb.from('profiles').update({role}).eq('id',id);if(r.error)toast(errMsg(r.error));else toast('Compte mis à jour');this.loadProfiles();},
+  /* ----- Reprise des données de l'ancienne version (cet appareil et sa synchro GitHub) ----- */
+  async importLocal(){
+    const d=lsGet(LS_DATA);if(!d){toast('Aucune donnée trouvée sur cet appareil. Utilise « Importer un fichier ».');return;}
+    const payload=Object.assign({app:'studio-tefi'},d);Object.keys(COLS).forEach(c=>{payload[c]=Object.values(d[c]||{});});
+    toast('Import en cours…');
+    await this.migratePhotos(payload.media||[]);
+    if(d.settings&&typeof d.settings==='object'&&!Array.isArray(d.settings.types))Store.saveSettings(d.settings);
+    importData(JSON.stringify(payload));
+    (d.history||[]).slice(0,HMAX_CLOUD).forEach(h=>{if(h&&h.id)this.hist(h);});
+    this.empty=false;await this.flush();
+  },
+  async migratePhotos(list){
+    let files=null;const gist=lsGet(LS_GIST);
+    for(const m of list){const p=m&&m.photo;if(!p||p.store==='supa'||p.store==='asset')continue;
+      try{let du='';
+        if(p.store==='idb')du=await idbGet(p.ref);
+        else if(p.store==='gist'&&gist&&gist.token&&gist.gistId){if(!files){Sync.cfg=gist;await Sync.fetchRemote();files=Sync.files;Sync.cfg=null;}if(files[p.ref])du=await (await fetch(files[p.ref])).text();}
+        if(!du)continue;const blob=await (await fetch(du)).blob();const np=await this.upload(m.id,blob);m.photo=Object.assign({},p,np);
+      }catch(e){}}
+  },
+  /* ----- Écrans ----- */
+  gate(){
+    const st=this.step,e=this.err?'<p class="supa-err">'+esc(this.err)+'</p>':'';
+    let h='<div class="gate"><div class="gate-brand"><div class="brand-mark">T</div><div><h1>Studio Tefi</h1><span class="muted">'+(st==='signup'?'Créer ton compte':st==='forgot'?'Mot de passe oublié':st==='recover'?'Nouveau mot de passe':'Connexion')+'</span></div></div>';
+    const em='<input class="inp" id="sb-email" type="email" autocomplete="email" placeholder="Adresse e-mail" aria-label="Adresse e-mail" required>';
+    if(st==='loading')h+='<section class="panel"><p class="muted" style="margin:0">Connexion en cours…</p></section>';
+    else if(st==='login')h+='<form class="panel supa-form" data-form="sb-login"><h2>Se connecter</h2>'+e+em+'<input class="inp" id="sb-pw" type="password" autocomplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe" required><button class="btn primary" type="submit">Se connecter</button>'+
+      '<div class="supa-links"><button type="button" class="btn ghost small" data-act="sb-step" data-step="signup">Créer mon compte</button><button type="button" class="btn ghost small" data-act="sb-step" data-step="forgot">Mot de passe oublié</button></div></form>';
+    else if(st==='signup')h+='<form class="panel supa-form" data-form="sb-signup"><h2>Créer mon compte</h2><p class="muted" style="margin:0">Le tout premier compte devient l\'admin. Les suivants attendent ta validation.</p>'+e+em+
+      '<input class="inp" id="sb-pw" type="password" autocomplete="new-password" placeholder="Mot de passe (8 caractères minimum)" aria-label="Mot de passe" minlength="8" required><input class="inp" id="sb-pw2" type="password" autocomplete="new-password" placeholder="Confirmer le mot de passe" aria-label="Confirmer le mot de passe" required>'+
+      '<button class="btn primary" type="submit">Créer mon compte</button><div class="supa-links"><button type="button" class="btn ghost small" data-act="sb-step" data-step="login">J\'ai déjà un compte</button></div></form>';
+    else if(st==='forgot')h+='<form class="panel supa-form" data-form="sb-forgot"><h2>Mot de passe oublié</h2><p class="muted" style="margin:0">Tu vas recevoir un lien par e-mail pour en choisir un nouveau.</p>'+e+em+
+      '<button class="btn primary" type="submit">Envoyer le lien</button><div class="supa-links"><button type="button" class="btn ghost small" data-act="sb-step" data-step="login">Retour</button></div></form>';
+    else if(st==='recover')h+='<form class="panel supa-form" data-form="sb-recover"><h2>Choisis un nouveau mot de passe</h2>'+e+
+      '<input class="inp" id="sb-pw" type="password" autocomplete="new-password" placeholder="Nouveau mot de passe" aria-label="Nouveau mot de passe" minlength="8" required><button class="btn primary" type="submit">Enregistrer</button></form>';
+    else if(st==='sent'||st==='sentreset')h+='<section class="panel supa-form"><h2>Regarde tes e-mails</h2><p style="margin:0">Un lien a été envoyé à <b>'+esc(this.info)+'</b>. '+(st==='sent'?'Clique dessus pour confirmer ton compte : tu reviendras ici, connectée.':'Clique dessus pour choisir un nouveau mot de passe.')+'</p><p class="hint" style="margin:0">Rien reçu ? Regarde dans les spams.</p><div class="supa-links"><button class="btn ghost small" data-act="sb-step" data-step="login">Retour à la connexion</button></div></section>';
+    else if(st==='pending'||st==='blocked')h+='<section class="panel supa-form"><h2>'+(st==='pending'?'Compte en attente':'Accès coupé')+'</h2><p style="margin:0">'+(st==='pending'?'Ton compte <b>'+esc(this.user&&this.user.email||'')+'</b> est bien créé. L\'admin doit maintenant le valider dans Réglages → Comptes.':'L\'admin a coupé l\'accès de ce compte.')+'</p>'+
+      '<div class="supa-links"><button class="btn" data-act="sb-recheck">Vérifier à nouveau</button><button class="btn ghost" data-act="sb-out">Se déconnecter</button></div></section>';
+    else if(st==='error')h+='<section class="panel supa-form"><h2>Petit souci</h2><p class="supa-err">'+esc(this.err)+'</p><div class="supa-links"><button class="btn" data-act="sb-recheck">Réessayer</button><button class="btn ghost" data-act="sb-out">Se déconnecter</button></div></section>';
+    return h+'</div>';
+  },
+  banner(){
+    if(!isAdmin()||!this.empty)return '';
+    const hasLocal=!!lsGet(LS_DATA);
+    return '<section class="panel supa-banner"><div><b>Ton compte en ligne est vide.</b><p class="muted" style="margin:4px 0 0">'+(hasLocal?'Ton planning de l\'ancienne version est encore sur cet appareil : récupère-le en un clic, photos comprises.':'Importe ta sauvegarde (.json) exportée depuis l\'ancienne version.')+'</p></div>'+
+      '<div class="supa-links">'+(hasLocal?'<button class="btn primary" data-act="sb-import-local">Récupérer les données de cet appareil</button>':'')+'<button class="btn" data-act="import">Importer un fichier</button><button class="btn ghost small" data-act="sb-dismiss">Plus tard</button></div></section>';
+  },
+  panel(){
+    const p=this.profile||{};
+    let h='<div class="sync-box"><p style="margin:0">Connectée : <b>'+esc(p.email||(this.user&&this.user.email)||'')+'</b> · '+esc(SUPA_ROLES[p.role]||'')+'</p>'+
+      '<p style="margin:0"><b>'+esc(this.label())+'</b>'+(Object.keys(this.out).length?' · <span class="muted">'+plural(Object.keys(this.out).length,'changement')+' en attente</span>':'')+'</p>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="sb-refresh">Actualiser</button>'+(isAdmin()?'<button class="btn" data-act="sb-import-local">Récupérer les données de cet appareil</button>':'')+'<button class="btn danger" data-act="sb-out" data-confirm="Confirmer la déconnexion">Se déconnecter</button></div></div>';
+    if(isAdmin()){
+      if(!this.profiles){this.profiles=[];this.loadProfiles();}
+      h+='<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><span class="label">Comptes</span><p class="hint" style="margin:4px 0 10px">Ton assistante crée son compte depuis la page de connexion, puis tu la passes en « Assistante » ici.</p><div class="supa-accounts">'+
+        this.profiles.map(x=>'<div class="supa-acc"><span>'+esc(x.email||'')+(x.id===(this.user&&this.user.id)?' <span class="muted">(toi)</span>':'')+'</span>'+
+          (x.id===(this.user&&this.user.id)?'<span class="pill plain">Admin</span>':'<select class="inp" data-sbrole="'+esc(x.id)+'" aria-label="Rôle de '+esc(x.email||'')+'">'+Object.keys(SUPA_ROLES).map(k=>'<option value="'+k+'"'+(x.role===k?' selected':'')+'>'+SUPA_ROLES[k]+'</option>').join('')+'</select>')+'</div>').join('')+'</div>';
+    }
+    return h;
+  },
+  click(a,el){
+    switch(a){
+      case 'sb-step':this.step=el.dataset.step;this.err='';render();return true;
+      case 'sb-out':this.signOut();return true;
+      case 'sb-recheck':this.err='';if(this.user)this.sb.auth.getSession().then(r=>{if(r.data.session)this.onSession(r.data.session);else{this.step='login';render();}});else{this.step='login';render();}return true;
+      case 'sb-refresh':this.flush().then(()=>this.refresh());toast('Actualisation…');return true;
+      case 'sb-import-local':this.importLocal();return true;
+      case 'sb-dismiss':this.empty=false;render();return true;
+    }
+    return false;
+  },
+  submit(k){
+    const v=id=>(($('#'+id)||{}).value||'').trim();this.err='';
+    if(k==='sb-login'){this.signIn(v('sb-email'),$('#sb-pw').value);return true;}
+    if(k==='sb-signup'){if($('#sb-pw').value!==$('#sb-pw2').value){this.err='Les deux mots de passe ne sont pas identiques.';render();return true;}this.signUp(v('sb-email'),$('#sb-pw').value);return true;}
+    if(k==='sb-forgot'){this.forgot(v('sb-email'));return true;}
+    if(k==='sb-recover'){this.newPassword($('#sb-pw').value);return true;}
+    return false;
+  }
+};
+function errMsg(e){return (e&&(e.message||e.error_description||e.msg))||String(e||'erreur');}
+function isNetErr(e){const m=errMsg(e);return !navigator.onLine||/Failed to fetch|NetworkError|Load failed|network|fetch/i.test(m)&&!(e&&e.code&&/^[0-9A-Z]{5}$/.test(e.code));}
+function authMsg(e){const m=errMsg(e);
+  if(/Invalid login credentials/i.test(m))return 'E-mail ou mot de passe incorrect.';
+  if(/Email not confirmed/i.test(m))return 'Confirme d\'abord ton adresse avec le lien reçu par e-mail.';
+  if(/already registered|already been registered/i.test(m))return 'Un compte existe déjà avec cette adresse : connecte-toi.';
+  if(/at least|weak|short/i.test(m))return 'Mot de passe trop court ou trop simple (8 caractères minimum).';
+  if(/rate limit|too many/i.test(m))return 'Trop d\'essais : attends quelques minutes.';
+  if(isNetErr(e))return 'Pas de connexion internet.';
+  return m;}
+
 /* ================= Rendu ================= */
 const VIEWS={home:viewHome,networks:viewNetworks,calendar:viewCalendar,contents:viewContents,ideas:viewIdeas,projection:viewProjection,search:viewSearch,business:viewBusiness,settings:viewSettings,more:viewMore};
 let rq=false;
@@ -2748,14 +3001,14 @@ function render(){
   document.body.classList.remove('gated');applyPermClasses();
   if(!isAdmin()&&S.ui.view==='settings')S.ui.view='home';
   const openD=[...main.querySelectorAll('details[id][open]')].map(x=>x.id);
-  main.innerHTML=(ROLE==='assistant'?'<div class="rolebar"><span>Vue assistante · '+esc(roleName('assistant'))+'</span><button data-act="switch-role">Changer de vue</button></div>':'')+VIEWS[S.ui.view]();
+  main.innerHTML=(ROLE==='assistant'?'<div class="rolebar"><span>Vue assistante · '+esc(roleName('assistant'))+'</span><button data-act="switch-role">'+(S.mode==='supa'?'Se déconnecter':'Changer de vue')+'</button></div>':'')+(S.mode==='supa'?Supa.banner():'')+VIEWS[S.ui.view]();
   openD.forEach(i=>{const d=document.getElementById(i);if(d)d.open=true;});
   Object.keys(kept).forEach(k=>{const el=document.getElementById(k);if(el&&!el.value)el.value=kept[k];});
   if(fid){const el=document.getElementById(fid);if(el){el.focus({preventScroll:true});try{if(s0!=null)el.setSelectionRange(s0,s1);}catch(e){}}}
   const nb=$('#board');if(nb)nb.scrollLeft=bl;
   document.querySelectorAll('.nav-btn[data-nav]').forEach(b=>{if(b.dataset.nav===S.ui.view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   const cs=contents();$('#cnt-contents').textContent=cs.filter(c=>c.status!=='idee').length||'';$('#cnt-ideas').textContent=ideasToHandle().length||'';$('#cnt-pj').textContent=(can('projection')?(isAdmin()?medias().filter(m=>m.kind==='version'&&m.status==='attente').length:medias().filter(m=>(m.kind==='version'&&m.status==='corriger')||(m.kind==='rush'&&m.status==='dispo'&&m.byRole!==ROLE)).length):0)||'';$('#cnt-biz').textContent=((can('rdv')?Object.values(S.rdv).filter(x=>x.date>=today()&&x.date<=addDays(today(),6)).length:0)+(isAdmin()?pendingDocs().length:0))||'';
-  $('#role-btn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Vue <b>'+esc(roleName(ROLE))+'</b> · changer</span>';$('#cnt-acc').textContent=Object.keys(S.accounts).length||'';
+  $('#role-btn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Vue <b>'+esc(roleName(ROLE))+'</b> · '+(S.mode==='supa'?'se déconnecter':'changer')+'</span>';$('#cnt-acc').textContent=Object.keys(S.accounts).length||'';
   if(peekId)renderPeek();
   if(ideaDraft&&!$('#idea').hidden&&!$('#idea-panel').contains(document.activeElement))renderIdea();
   if(pjId&&!$('#projm').hidden){const mm=S.media[pjId];const sig=mm?JSON.stringify([mm.status,mm.comments,mm.photo&&MediaStore.url(mm.photo).length]):'';if(sig!==window.__pjSig&&!$('#pj-panel').contains(document.activeElement)){window.__pjSig=sig;renderPj();}}
@@ -3105,6 +3358,7 @@ function copyText(txt,ok,fallbackEl){
 }
 /* Champs de la vue principale */
 document.addEventListener('change',e=>{
+  if(e.target.dataset&&e.target.dataset.sbrole&&S.mode==='supa'&&isAdmin()){Supa.setProfileRole(e.target.dataset.sbrole,e.target.value);return;}
   const el=e.target;if(!$('#main').contains(el))return;
   if(handleM4Change(el))return;
   if(el.dataset.pjf){S.ui.pjProject=el.value;saveUI();render();return;}
