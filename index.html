@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Studio Tefi · version 5.0 · 16 octobre 2026 -->
+<!-- Studio Tefi · version 5.1 · 16 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -378,6 +378,71 @@ body[data-role="assistant"] .strip .is-today{background:var(--accent);border-col
 body.gated .nav,body.gated .fab{display:none}
 body.gated .app{grid-template-columns:minmax(0,1fr)}
 .gate{max-width:520px;margin:6vh auto 0;display:flex;flex-direction:column;gap:18px}
+/* v5.1 · menu réductible */
+.nav-toggle{margin-left:auto;display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:8px;background:none;color:var(--muted)}
+.nav-toggle:hover{background:var(--surface-2);color:var(--fg)}.nav-toggle svg{width:18px;height:18px}
+@media (min-width:900px){
+  .app{transition:grid-template-columns .18s ease}
+  body.nav-mini .app{grid-template-columns:72px minmax(0,1fr)}
+  body.nav-mini .nav{padding:18px 10px;align-items:stretch}
+  body.nav-mini .brand{flex-direction:column;gap:10px;padding:2px 0 14px;align-items:center}
+  body.nav-mini .brand b{display:none}
+  body.nav-mini .nav-toggle{margin:0}
+  body.nav-mini .nav-toggle svg{transform:scaleX(-1)}
+  body.nav-mini .nav-btn{font-size:0;gap:0;justify-content:center;padding:11px 0;position:relative}
+  body.nav-mini .nav-btn .count{position:absolute;top:3px;right:6px;margin:0;font-size:9.5px;padding:0 5px;line-height:15px;background:var(--accent);color:var(--accent-fg)}
+  body.nav-mini .nav-btn .count:empty{display:none}
+  body.nav-mini .sync{justify-content:center;padding:10px 0}body.nav-mini .sync span{display:none}
+}
+@media (max-width:899px){.nav-toggle{display:none}}
+@media (prefers-reduced-motion:reduce){.app{transition:none}}
+/* v5.1 · fiches repliables */
+.comp-list{display:flex;flex-direction:column;gap:10px}
+.mini-row{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap}
+.mini-row>.dot{width:12px;height:12px}
+.mini-main{display:flex;flex-direction:column;min-width:0;flex:1}
+.mini-main b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-main .hint{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-acts{display:flex;gap:6px;flex-wrap:wrap}
+@media (max-width:560px){.mini-acts{width:100%}.mini-main .hint{white-space:normal}}
+/* v5.1 · thèmes */
+.th-row{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.th-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.th-sw{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;color:var(--fg);cursor:pointer;text-align:left}
+.th-sw[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);font-weight:600}
+.th-prev{display:flex;width:100%;height:30px;border-radius:7px;overflow:hidden;border:1px solid rgba(0,0,0,.08)}
+.th-prev i{flex:1}.th-prev i:nth-child(1){background:var(--sb)}.th-prev i:nth-child(2){background:var(--ss)}.th-prev i:nth-child(3){background:var(--sa)}
+.th-custom .th-prev{background:var(--sa);position:relative}
+.th-custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+/* v5.1 · réseaux */
+.acc-sum{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.acc-card{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.acc-card-h{display:flex;align-items:center;gap:10px}.acc-card-h>.dot{width:10px;height:10px}
+.acc-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.acc-nums div{background:var(--surface-2);border-radius:8px;padding:7px 8px;display:flex;flex-direction:column}
+.acc-nums b{font-family:var(--f-display);font-size:19px;line-height:1.1}.acc-nums span{font-size:11.5px;color:var(--muted)}
+.acc-next{margin:0;font-size:13px;overflow-wrap:anywhere}
+.acc-tone{margin:0;font-size:13px;color:var(--muted);font-style:italic}
+.acc-style{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+.acc-suggest{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}
+/* v5.1 · page d'accueil */
+.land{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:36px;padding-bottom:30px}
+.land-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.land-top .brand{padding:0;display:flex!important}
+.land-hero{display:flex;flex-direction:column;gap:14px;max-width:720px;padding-top:4vh}
+.land-hero h1{font-family:var(--f-display);font-size:clamp(34px,6vw,58px);line-height:1.02;letter-spacing:-.03em;margin:0}
+.land-hero p{font-size:17px;color:var(--muted);margin:0;max-width:62ch}
+.land-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.land-feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.land-feat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.land-feat h3{margin:0;font-size:16px}.land-feat p{margin:0;color:var(--muted);font-size:14px}
+.land-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.land-steps h2{font-family:var(--f-display);margin:0 0 12px;font-size:22px}
+.land-steps ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;counter-reset:st}
+.land-steps li{counter-increment:st;display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 12px 12px 0}
+.land-steps li::before{content:"0" counter(st);font-family:var(--f-mono);font-size:12px;color:var(--accent)}
+.land-steps li span{color:var(--muted);font-size:14px}
+.land-foot{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
 .supa-form{display:flex;flex-direction:column;gap:12px}.supa-form h2{margin:0}.supa-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .supa-err{margin:0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--late) 12%,transparent);color:var(--late);font-size:14px}
 .supa-banner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-color:var(--accent)}
@@ -520,7 +585,7 @@ window.STUDIO_SUPA={url:'https://yqtzbwgjilyemvbtgbzg.supabase.co',key:'sb_publi
 <body>
 <div class="app">
   <nav class="nav" id="nav" aria-label="Navigation">
-    <div class="brand"><div class="brand-mark">T</div><b>Studio Tefi</b></div>
+    <div class="brand"><div class="brand-mark">T</div><b>Studio Tefi</b><button class="nav-toggle" id="nav-toggle" data-act="nav-toggle" aria-label="Réduire le menu" title="Réduire le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 10l-2 2 2 2"/></svg></button></div>
     <button class="nav-btn nav-desk" data-nav="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Rechercher</button>
     <button class="nav-btn" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Résumé</button>
     <button class="nav-btn" data-nav="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendrier</button>
@@ -553,8 +618,9 @@ window.STUDIO_SUPA={url:'https://yqtzbwgjilyemvbtgbzg.supabase.co',key:'sb_publi
 (function(){
 "use strict";
 /* ================= Constantes ================= */
-const APP_VERSION='5.0';
+const APP_VERSION='5.1';
 const VERSIONS=[
+  {v:'5.1',date:'2026-10-16',items:['Menu latéral réductible : icônes seules ou menu complet, mémorisé sur chaque appareil','Couleurs de l\'interface : 8 assemblages + couleur perso, choisis par l\'admin pour sa vue et pour celle de l\'assistante','Entreprises et clients en liste compacte : la fiche complète s\'ouvre avec « Modifier »','Réseaux : résumé de chaque compte et style de contenu (thématiques + ton), comptes suggérés dans la fiche d\'un contenu','Version GitHub : page d\'accueil avec « Se connecter » et « Pas de compte ? Inscris-toi »','Version GitHub : un compte différent par onglet pour tester, déconnexion limitée à l\'appareil']},
   {v:'5.0',date:'2026-10-16',items:['Version GitHub : vrais comptes en ligne (Supabase) avec e-mail et mot de passe, pour toi et ton assistante','Sécurité côté serveur : les autorisations de l\'assistante sont vérifiées par la base, plus seulement par l\'écran','Mise à jour en direct sur tous les appareils, et changements gardés en attente hors connexion','Photos rangées dans un espace de stockage privé','Réglages → Comptes : valider ou couper l\'accès d\'un compte','Reprise en un clic des données et photos de l\'ancienne version']},
   {v:'4.0',date:'2026-10-16',items:[
     "Nouvel onglet Projection : rushs à télécharger, versions à valider (liens vidéo, photos déposées ou liens), lecteur intégré, retours minutés ou repères sur photo, cases à cocher, rapport de corrections en PDF, validation → « Prêt à publier »",
@@ -1058,6 +1124,7 @@ function platCard(p,accs){
 function viewNetworks(){
   const st=settings();const accs=accounts();
   let h='<div class="wrap"><div class="head"><div><span class="label">Réseaux &amp; distribution</span><h1>Où tu diffuses</h1><p class="muted">Réseaux sociaux, TV, cinéma… Chaque plateforme appartient à un type de distribution, et contient tes comptes, chaînes ou salles.</p></div></div>';
+  h+=accSummaryPanel();
   h+='<section class="panel"><div class="panel-h"><h2>Ajouter un compte</h2></div>'+accQuickForm('na').replace('class="quick-acc"','class="quick-acc" style="margin-top:0"')+'</section>'+perfPanel()+mediaKitPanel();
   st.channels.forEach(ch=>{const ps=st.platforms.filter(p=>p.channel===ch.id);
     h+='<div class="chan"><div class="chan-h"><h2>'+esc(ch.label)+'</h2><span class="mono muted">'+plural(ps.length,'plateforme')+'</span></div>';
@@ -1286,6 +1353,7 @@ function viewSettings(){
     st.themes.map(t=>'<div class="set-item"><input class="inp" id="th-'+esc(t.id)+'" value="'+esc(t.label)+'" data-theme-label="'+esc(t.id)+'" aria-label="Nom de la thématique"><button class="icon-btn sm danger" data-act="theme-del" data-id="'+esc(t.id)+'" data-confirm="✓" aria-label="Supprimer '+esc(t.label)+'">'+ICON.x+'</button></div>').join('')+
     '</div><form class="add-form" data-form="theme"><input class="inp" id="theme-new" placeholder="Nouvelle thématique (ex. Gaming)" autocomplete="off"><button class="btn" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
   h+='</div>';
+  h+=uiThemePanel();
   h+='<section class="panel"><div class="panel-h"><h2>Vues &amp; accès</h2></div><div class="f-grid">'+
     '<label class="field"><span>Prénom de l\'assistante</span><input class="inp" id="asst-name" value="'+esc(st.assistantName)+'" placeholder="Assistante" data-asst-name="1"></label>'+
     (S.mode==='supa'?'</div>':'<form class="field" data-form="pin" style="grid-column:span 2"><span>Changer le code PIN admin</span><div class="link-line"><input class="inp pin" id="pin-new" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••" aria-label="Nouveau code PIN"><button class="btn" type="submit">Enregistrer</button></div></form></div>')+
@@ -1442,6 +1510,12 @@ function deleteRdv(id){const before=S.rdv[id];if(!before)return;Store.deleteRdv(
 /* ================= Actions v3 ================= */
 function handleV3Click(a,el,e){
   const id=el.dataset.id;
+  switch(a){
+    case 'nav-toggle':lsSet(LS_NAVMINI,!lsGet(LS_NAVMINI));applyNavMini();return true;
+    case 'fold':{const k=el.dataset.key;if(OPEN[k])delete OPEN[k];else OPEN[k]=true;render();return true;}
+    case 'ui-theme':updateSettings(s=>{s.uiThemes=Object.assign({},s.uiThemes||{});s.uiThemes[el.dataset.who]=el.dataset.t;},'Couleurs de l\'interface modifiées');return true;
+    case 'acc-style':{const acc=S.accounts[id];if(!acc)return true;const t=el.dataset.t;const cur=(acc.styles||[]).slice();const i=cur.indexOf(t);if(i>=0)cur.splice(i,1);else cur.push(t);updateAccount(id,{styles:cur});return true;}
+  }
   if(S.mode==='supa'){if(Supa.click(a,el))return true;if(a==='switch-role'){if(confirm('Se déconnecter de Studio Tefi sur cet appareil ?'))Supa.signOut();return true;}}
   switch(a){
     case 'gate-admin':gateStep='pin';render();return true;
@@ -1568,8 +1642,8 @@ function sumBy(list,f){const m={};list.forEach(d=>{const c=d.currency||'MGA';m[c
 const PROF_FIELDS=[['name','Nom de l\'entreprise *'],['activity','Activité'],['phone','Téléphone'],['email','E-mail'],['nif','NIF'],['stat','STAT'],['rcs','RCS'],['address','Adresse'],['country','Pays']];
 function viewProfiles(){
   let h='<p class="muted" style="margin:0">Les entreprises qui émettent tes devis et factures. Remplis-les une fois : leurs infos sont reprises automatiquement sur chaque document.</p>';
-  h+=profiles().map(p=>{const used=docs().filter(d=>d.profileId===p.id).length;
-    return '<section class="panel comp-card"><div class="set-item"><input type="color" class="swatch" id="pfc-'+esc(p.id)+'" value="'+esc(p.color||'#4636D9')+'" data-prof="color" data-id="'+esc(p.id)+'" aria-label="Couleur des documents"><h2 style="flex:1">'+esc(p.name||'Sans nom')+'</h2>'+
+  h+='<div class="comp-list">'+profiles().map(p=>{const used=docs().filter(d=>d.profileId===p.id).length;if(!OPEN['prof:'+p.id])return profMini(p,used);
+    return '<section class="panel comp-card"><div class="set-item"><input type="color" class="swatch" id="pfc-'+esc(p.id)+'" value="'+esc(p.color||'#4636D9')+'" data-prof="color" data-id="'+esc(p.id)+'" aria-label="Couleur des documents"><h2 style="flex:1">'+esc(p.name||'Sans nom')+'</h2>'+foldBtn('prof:'+p.id)+
       '<button class="icon-btn danger" data-act="prof-del" data-id="'+esc(p.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer ce profil"'+(used?' disabled title="Utilisé par '+used+' document(s)"':'')+'>'+ICON.trash+'</button></div>'+
       '<div class="f-grid">'+PROF_FIELDS.map(f=>'<label class="field'+(f[0]==='address'?' wide':'')+'"><span>'+f[1]+'</span><input class="inp" id="pf-'+f[0]+'-'+esc(p.id)+'" value="'+esc(p[f[0]]||'')+'" data-prof="'+f[0]+'" data-id="'+esc(p.id)+'"></label>').join('')+'</div>'+
       '<details class="fold" id="pfd-'+esc(p.id)+'"><summary style="font-size:15px">Facturation, logo et mentions</summary><div class="f-grid" style="margin-top:10px">'+
@@ -1583,7 +1657,7 @@ function viewProfiles(){
         '<div class="field wide"><span>Logo</span><div class="set-item">'+(p.logo?'<img src="'+esc(p.logo)+'" alt="Logo" style="height:44px;width:auto;border:1px solid var(--line);border-radius:6px;background:#fff;padding:3px">':'<span class="hint">Aucun logo</span>')+
           '<label class="btn small" style="cursor:pointer">Choisir une image<input type="file" accept="image/*" data-prof-logo="'+esc(p.id)+'" hidden></label>'+(p.logo?'<button class="btn small ghost" data-act="prof-nologo" data-id="'+esc(p.id)+'">Retirer</button>':'')+'</div></div>'+
       '</div></details>'+
-      '<div class="card-f"><button class="btn small" data-act="doc-new" data-kind="facture" data-prof="'+esc(p.id)+'">'+ICON.plus+'Facture</button><button class="btn small" data-act="doc-new" data-kind="devis" data-prof="'+esc(p.id)+'">'+ICON.plus+'Devis</button><span class="hint">'+plural(used,'document')+'</span></div></section>';}).join('');
+      '<div class="card-f"><button class="btn small" data-act="doc-new" data-kind="facture" data-prof="'+esc(p.id)+'">'+ICON.plus+'Facture</button><button class="btn small" data-act="doc-new" data-kind="devis" data-prof="'+esc(p.id)+'">'+ICON.plus+'Devis</button><span class="hint">'+plural(used,'document')+'</span></div></section>';}).join('')+'</div>';
   h+='<section class="panel"><h3>'+(profiles().length?'Ajouter une autre entreprise':'Crée le profil de ton entreprise')+'</h3><form class="add-form" data-form="prof"><input class="inp" id="prof-new" placeholder="Nom de l\'entreprise" autocomplete="off"><button class="btn primary" type="submit">'+ICON.plus+'Créer le profil</button></form><p class="hint" style="margin:8px 0 0">Tu complètes ensuite le numéro, le mail, le NIF, le STAT, le RCS, l\'adresse et le pays.</p></section>';
   return h;
 }
@@ -1761,8 +1835,8 @@ const DENIED='Cette action n\'est pas autorisée dans la vue assistante.';
 const ACT_PERM={'del-content':'projDelete','ed-delete':'projDelete','new':'projEdit','open':'projEdit','peek-edit':'projEdit','peek-dup':'projEdit','ed-dup':'projEdit','ed-addpub':'projEdit','ed-delpub':'projEdit',
   'ed-addshoot':'projEdit','ed-delshoot':'projEdit','ed-addscene':'projEdit','ed-delscene':'projEdit','ed-theme':'projEdit','peek-delpub':'projEdit',
   'advance':'projStatus','mark-done':'projStatus','ed-status':'projStatus','acc-del':'accounts','acc-nature':'accounts',
-  'rdv-new':'rdv','rdv-save':'rdv','rdv-del':'rdv','comp-del':'clients','comp-filter':'rdv'};
-const ADMIN_ONLY=['restore','type-del','theme-del','plat-del','chan-del','idea-validate','idea-review','idea-promote','export','import','doc-approve','doc-reject'];
+  'rdv-new':'rdv','rdv-save':'rdv','rdv-del':'rdv','comp-del':'clients','comp-filter':'rdv','acc-style':'accounts','ed-addpub-acc':'projEdit'};
+const ADMIN_ONLY=['restore','type-del','theme-del','plat-del','chan-del','idea-validate','idea-review','idea-promote','export','import','doc-approve','doc-reject','ui-theme'];
 function actAllowed(a,el){
   if(isAdmin())return true;
   if(ADMIN_ONLY.includes(a)){toast('Réservé à la vue admin.');return false;}
@@ -1827,11 +1901,11 @@ function viewClients(){
   let h='<p class="muted" style="margin:0">Tes clients servent partout : rendez-vous pro, projets, devis et factures. Leurs infos sont reprises automatiquement sur les documents.</p>';
   if(ed)h+='<section class="panel"><h3>Ajouter un client</h3><form class="add-form" data-form="comp"><input class="inp" id="comp-new" placeholder="Nom du client (ex. Orange Madagascar)" autocomplete="off"><input type="color" class="swatch" id="comp-new-color" value="#3D5A80" aria-label="Couleur"><button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
   if(!companies().length)return h+'<div class="empty"><b>Aucun client pour l\'instant</b>'+(ed?'Ajoute ton premier client ci-dessus.':'Aucun client enregistré.')+'</div>';
-  h+='<div class="grid-2">'+companies().map(c=>{const mine=all.filter(x=>x.kind!=='perso'&&x.companyId===c.id);const next=mine.filter(x=>x.date>=t).sort((a,b)=>a.date<b.date?-1:1)[0];
-      const pj=contents().filter(x=>x.companyId===c.id).length;const nd=docs().filter(d=>d.companyId===c.id).length;const dis=ed?'':' disabled';
+  h+='<div class="comp-list">'+companies().map(c=>{const mine=all.filter(x=>x.kind!=='perso'&&x.companyId===c.id);const next=mine.filter(x=>x.date>=t).sort((a,b)=>a.date<b.date?-1:1)[0];
+      const pj=contents().filter(x=>x.companyId===c.id).length;const nd=docs().filter(d=>d.companyId===c.id).length;const dis=ed?'':' disabled';if(!OPEN['cl:'+c.id])return clientMini(c,next,pj,nd,ed);
       return '<section class="panel comp-card"><div class="set-item"><input type="color" class="swatch" id="cc-'+esc(c.id)+'" value="'+esc(c.color)+'" data-comp-color="'+esc(c.id)+'" aria-label="Couleur"'+dis+'>'+
         '<input class="inp" id="cl-'+esc(c.id)+'" value="'+esc(c.label)+'" data-comp-label="'+esc(c.id)+'" aria-label="Nom du client" style="font-weight:700"'+dis+'>'+
-        (ed?'<button class="icon-btn danger" data-act="comp-del" data-id="'+esc(c.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(c.label)+'">'+ICON.trash+'</button>':'')+'</div>'+
+        foldBtn('cl:'+c.id)+(ed?'<button class="icon-btn danger" data-act="comp-del" data-id="'+esc(c.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(c.label)+'">'+ICON.trash+'</button>':'')+'</div>'+
         '<div class="f-grid">'+CLIENT_FIELDS.map(f=>'<label class="field'+(f[0]==='address'?' wide':'')+'"><span>'+f[1]+'</span><input class="inp" id="cf-'+f[0]+'-'+esc(c.id)+'" value="'+esc(c[f[0]]||'')+'" data-compf="'+f[0]+'" data-id="'+esc(c.id)+'"'+dis+'></label>').join('')+'</div>'+
         '<div class="kvs"><div><span class="label">Prochain RDV</span><b>'+(next?esc(fmtShort(next.date))+(next.start?' · '+esc(next.start):''):'—')+'</b></div><div><span class="label">Projets</span><b>'+pj+'</b></div><div><span class="label">Devis et factures</span><b>'+nd+'</b></div></div>'+
         '<div class="card-f">'+(can('rdv')?'<button class="btn small" data-act="rdv-new" data-comp="'+esc(c.id)+'">'+ICON.plus+'RDV</button>':'')+(can('devis')?'<button class="btn small" data-act="doc-new" data-kind="devis" data-comp="'+esc(c.id)+'">'+ICON.plus+'Devis</button>':'')+
@@ -1945,8 +2019,8 @@ function handleBillingClick(a,el,e){
       if(src.status!=='accepte'&&S.docs[src.id]){const q=clone(S.docs[src.id]);if(isAdmin()){q.status='accepte';q.pendingStatus=null;}else if(can('payStatus'))q.pendingStatus={to:'accepte',by:roleName(ROLE),at:Date.now()};saveDocDirect(q);}
       docDraft=f;docOrig=null;saveDoc(true);renderDoc();toast('Facture '+f.number+' créée depuis le devis'+(!isAdmin()?' (acceptation du devis à valider par l\'admin)':''));}return true;
     case 'doc-del':{e.stopPropagation();const d=S.docs[id];if(!isAdmin()&&d&&d.status!=='brouillon'){toast('Tu peux supprimer seulement les brouillons.');return true;}deleteDoc(id);}return true;
-    case 'prof-del':{if(docs().some(d=>d.profileId===id)){toast('Ce profil est utilisé par des documents.');return true;}const lbl=(profOf(id)||{}).name||'';updateSettings(s=>{s.profiles=(s.profiles||[]).filter(p=>p.id!==id);},'Profil « '+lbl+' » supprimé');}return true;
-    case 'prof-nologo':updateSettings(s=>{const p=(s.profiles||[]).find(x=>x.id===id);if(p){delete p.logo;delete p.logoW;delete p.logoH;}},'Logo retiré');return true;
+    case 'prof-del':if(!isAdmin()){toast('Réservé à la vue admin.');return true;}{if(docs().some(d=>d.profileId===id)){toast('Ce profil est utilisé par des documents.');return true;}const lbl=(profOf(id)||{}).name||'';updateSettings(s=>{s.profiles=(s.profiles||[]).filter(p=>p.id!==id);},'Profil « '+lbl+' » supprimé');}return true;
+    case 'prof-nologo':if(!isAdmin())return true;updateSettings(s=>{const p=(s.profiles||[]).find(x=>x.id===id);if(p){delete p.logo;delete p.logoW;delete p.logoH;}},'Logo retiré');return true;
     case 'presta-del':{const lbl=(prestations().find(x=>x.id===id)||{}).label||'';updateSettings(s=>{s.prestations=(s.prestations||[]).filter(x=>x.id!==id);},'Prestation « '+lbl+' » supprimée');}return true;
   }
   return false;
@@ -2752,12 +2826,15 @@ function viewSearch(){
 
 /* ================= Comptes en ligne (Supabase · version GitHub) ================= */
 const SUPA_CFG=window.STUDIO_SUPA||null;
-const LS_SUPA_OUT='studio-tefi-supa-outbox',LS_SUPA_CACHE='studio-tefi-supa-cache';
+const LS_SUPA_OUT='studio-tefi-supa-outbox',LS_SUPA_CACHE='studio-tefi-supa-cache',SS_SOLO='studio-tefi-tab-solo';
 const SUPA_ROLES={admin:'Admin',assistant:'Assistante',pending:'En attente',blocked:'Bloqué'};
 const Supa={
   sb:null,user:null,profile:null,step:'loading',err:'',info:'',state:'off',out:{},flushT:null,busy:false,ch:null,lastAt:0,lastFetch:0,empty:false,profiles:null,cacheT:null,retryT:null,
+  solo:ssGet(SS_SOLO)||'',
+  outKey(){return LS_SUPA_OUT+':'+(this.user&&this.user.id);},cacheKey(){return LS_SUPA_CACHE+':'+(this.user&&this.user.id);},
   enabled(){return !!(SUPA_CFG&&SUPA_CFG.url&&SUPA_CFG.key&&!(window.claude&&window.claude.use));},
-  label(){return this.state==='offline'?'Hors ligne : tes changements partiront au retour du réseau':this.state==='sending'?'Enregistrement…':this.state==='error'?'Synchro en erreur':this.lastAt?'Synchronisé à '+pad(new Date(this.lastAt).getHours())+':'+pad(new Date(this.lastAt).getMinutes()):'Synchronisé en direct';},
+  label(){return (this.solo?'Onglet séparé · ':'')+this.labelCore();},
+  labelCore(){return this.state==='offline'?'Hors ligne : tes changements partiront au retour du réseau':this.state==='sending'?'Enregistrement…':this.state==='error'?'Synchro en erreur':this.lastAt?'Synchronisé à '+pad(new Date(this.lastAt).getHours())+':'+pad(new Date(this.lastAt).getMinutes()):'Synchronisé en direct';},
   setState(s){this.state=s;renderSync();},
   async loadLib(){
     if(window.supabase&&window.supabase.createClient)return true;
@@ -2768,8 +2845,10 @@ const Supa={
   /* Démarrage : renvoie false si Supabase n'est pas utilisable (on retombe alors sur le mode appareil) */
   async start(){
     if(!(await this.loadLib()))return false;
-    try{this.sb=window.supabase.createClient(SUPA_CFG.url,SUPA_CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'studio-tefi-auth'}});}catch(e){return false;}
-    S.mode='supa';ROLE='';S.loaded=true;this.out=lsGet(LS_SUPA_OUT)||{};
+    const auth={persistSession:true,autoRefreshToken:true,detectSessionInUrl:!this.solo,storageKey:this.solo||'studio-tefi-auth'};
+    if(this.solo)auth.storage={getItem:k=>{try{return sessionStorage.getItem(k);}catch(e){return null;}},setItem:(k,v)=>{try{sessionStorage.setItem(k,v);}catch(e){}},removeItem:k=>{try{sessionStorage.removeItem(k);}catch(e){}}};
+    try{this.sb=window.supabase.createClient(SUPA_CFG.url,SUPA_CFG.key,{auth});}catch(e){return false;}
+    S.mode='supa';ROLE='';S.loaded=true;this.out={};
     if(/type=recovery/.test(location.hash))this.step='recover';
     this.sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>{
       if(ev==='PASSWORD_RECOVERY'){this.step='recover';render();return;}
@@ -2777,7 +2856,7 @@ const Supa={
       if(session&&session.user&&(!this.user||this.user.id!==session.user.id)&&this.step!=='recover')this.onSession(session);
     },0);});
     let session=null;try{const r=await this.sb.auth.getSession();session=r.data&&r.data.session;}catch(e){}
-    if(session&&this.step!=='recover')await this.onSession(session);else if(this.step!=='recover'){this.step='login';render();}
+    if(session&&this.step!=='recover')await this.onSession(session);else if(this.step!=='recover'){this.step=this.solo?'login':'landing';render();}
     window.addEventListener('online',()=>{this.flush();this.refresh();});
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ROLE&&Date.now()-this.lastFetch>60000)this.refresh();else if(document.visibilityState==='hidden')this.flush();});
     return true;
@@ -2785,10 +2864,10 @@ const Supa={
   reset(){this.user=null;this.profile=null;this.profiles=null;ROLE='';if(this.ch){try{this.sb.removeChannel(this.ch);}catch(e){}this.ch=null;}
     Object.keys(COLS).forEach(c=>{S[c]={};});S.settings=null;S.history=[];this.step='login';this.setState('off');render();},
   async onSession(session){
-    this.user=session.user;this.step='loading';render();
+    this.user=session.user;this.step='loading';this.out=lsGet(this.outKey())||{};render();
     let p=null,err=null;
     try{const r=await this.sb.from('profiles').select('*').eq('id',this.user.id).maybeSingle();p=r.data;err=r.error;}catch(e){err=e;}
-    const cache=lsGet(LS_SUPA_CACHE);
+    const cache=lsGet(this.cacheKey());
     if(err&&!p){
       if(cache&&cache.uid===this.user.id&&cache.role&&isNetErr(err)){p={id:this.user.id,email:this.user.email,role:cache.role};this.setState('offline');}
       else{this.step='error';this.err=/profiles|relation|schema/i.test(errMsg(err))?'La base n\'est pas encore installée : lance le script supabase-setup.sql dans Supabase.':'Connexion impossible : '+errMsg(err);render();return;}
@@ -2843,9 +2922,9 @@ const Supa={
     else{const x=Object.assign({},r.data,{id:r.id});S[r.col][r.id]=r.col==='contents'?normContent(x):x;}
     this.lastAt=Date.now();renderSync();this.saveCache();scheduleRender();
   },
-  saveCache(){clearTimeout(this.cacheT);this.cacheT=setTimeout(()=>{if(this.user&&ROLE)lsSet(LS_SUPA_CACHE,{uid:this.user.id,role:ROLE,data:localPayload()});},1500);},
+  saveCache(){clearTimeout(this.cacheT);this.cacheT=setTimeout(()=>{if(this.user&&ROLE)lsSet(this.cacheKey(),{uid:this.user.id,role:ROLE,data:localPayload()});},1500);},
   /* ----- Écritures : regroupées et envoyées par lots, gardées en attente hors ligne ----- */
-  queue(key,o){this.out[key]=o;lsSet(LS_SUPA_OUT,this.out);this.saveCache();clearTimeout(this.flushT);this.flushT=setTimeout(()=>this.flush(),400);},
+  queue(key,o){this.out[key]=o;lsSet(this.outKey(),this.out);this.saveCache();clearTimeout(this.flushT);this.flushT=setTimeout(()=>this.flush(),400);},
   put(col,id,data,deleted){this.queue(col+':'+id,{col,id,data:clone(data||{}),deleted:!!deleted});},
   hist(e){this.queue('history:'+e.id,{col:'history',id:e.id,data:clone(e)});},
   setSettings(s){this.queue('settings',{settings:clone(s)});},
@@ -2872,7 +2951,7 @@ const Supa={
         if(this.state!=='offline')this.setState('ok');
       }
     }
-    lsSet(LS_SUPA_OUT,this.out);this.busy=false;
+    lsSet(this.outKey(),this.out);this.busy=false;
     if(Object.keys(this.out).length&&this.state==='ok'){this.flushT=setTimeout(()=>this.flush(),400);}
   },
   /* ----- Photos ----- */
@@ -2890,7 +2969,9 @@ const Supa={
     if(r.error){this.err=authMsg(r.error);render();return;}this.step='sentreset';this.info=email;render();},
   async newPassword(pw){const r=await this.sb.auth.updateUser({password:pw});if(r.error){this.err=authMsg(r.error);render();return;}
     history.replaceState(null,'',location.pathname);toast('Nouveau mot de passe enregistré');this.step='loading';const s=await this.sb.auth.getSession();if(s.data.session)this.onSession(s.data.session);else{this.step='login';render();}},
-  async signOut(){await this.flush();try{await this.sb.auth.signOut();}catch(e){}try{localStorage.removeItem(LS_SUPA_CACHE);}catch(e){}this.reset();},
+  async signOut(){await this.flush();const ck=this.cacheKey();try{await this.sb.auth.signOut({scope:'local'});}catch(e){}try{localStorage.removeItem(ck);}catch(e){}this.reset();},
+  async tabSolo(){await this.flush();ssSet(SS_SOLO,'studio-tefi-auth-tab-'+Date.now().toString(36));location.reload();},
+  async tabMain(){await this.flush();try{await this.sb.auth.signOut({scope:'local'});}catch(e){}ssSet(SS_SOLO,'');location.reload();},
   async loadProfiles(){const r=await this.sb.from('profiles').select('*').order('created_at');if(!r.error){this.profiles=r.data;scheduleRender();}else toast('Comptes : '+errMsg(r.error));},
   async setProfileRole(id,role){const r=await this.sb.from('profiles').update({role}).eq('id',id);if(r.error)toast(errMsg(r.error));else toast('Compte mis à jour');this.loadProfiles();},
   /* ----- Reprise des données de l'ancienne version (cet appareil et sa synchro GitHub) ----- */
@@ -2916,11 +2997,12 @@ const Supa={
   /* ----- Écrans ----- */
   gate(){
     const st=this.step,e=this.err?'<p class="supa-err">'+esc(this.err)+'</p>':'';
+    if(st==='landing')return landingHtml();
     let h='<div class="gate"><div class="gate-brand"><div class="brand-mark">T</div><div><h1>Studio Tefi</h1><span class="muted">'+(st==='signup'?'Créer ton compte':st==='forgot'?'Mot de passe oublié':st==='recover'?'Nouveau mot de passe':'Connexion')+'</span></div></div>';
     const em='<input class="inp" id="sb-email" type="email" autocomplete="email" placeholder="Adresse e-mail" aria-label="Adresse e-mail" required>';
     if(st==='loading')h+='<section class="panel"><p class="muted" style="margin:0">Connexion en cours…</p></section>';
     else if(st==='login')h+='<form class="panel supa-form" data-form="sb-login"><h2>Se connecter</h2>'+e+em+'<input class="inp" id="sb-pw" type="password" autocomplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe" required><button class="btn primary" type="submit">Se connecter</button>'+
-      '<div class="supa-links"><button type="button" class="btn ghost small" data-act="sb-step" data-step="signup">Créer mon compte</button><button type="button" class="btn ghost small" data-act="sb-step" data-step="forgot">Mot de passe oublié</button></div></form>';
+      '<div class="supa-links"><button type="button" class="btn ghost small" data-act="sb-step" data-step="signup">Pas de compte ? Inscris-toi</button><button type="button" class="btn ghost small" data-act="sb-step" data-step="forgot">Mot de passe oublié</button></div></form>';
     else if(st==='signup')h+='<form class="panel supa-form" data-form="sb-signup"><h2>Créer mon compte</h2><p class="muted" style="margin:0">Le tout premier compte devient l\'admin. Les suivants attendent ta validation.</p>'+e+em+
       '<input class="inp" id="sb-pw" type="password" autocomplete="new-password" placeholder="Mot de passe (8 caractères minimum)" aria-label="Mot de passe" minlength="8" required><input class="inp" id="sb-pw2" type="password" autocomplete="new-password" placeholder="Confirmer le mot de passe" aria-label="Confirmer le mot de passe" required>'+
       '<button class="btn primary" type="submit">Créer mon compte</button><div class="supa-links"><button type="button" class="btn ghost small" data-act="sb-step" data-step="login">J\'ai déjà un compte</button></div></form>';
@@ -2932,6 +3014,8 @@ const Supa={
     else if(st==='pending'||st==='blocked')h+='<section class="panel supa-form"><h2>'+(st==='pending'?'Compte en attente':'Accès coupé')+'</h2><p style="margin:0">'+(st==='pending'?'Ton compte <b>'+esc(this.user&&this.user.email||'')+'</b> est bien créé. L\'admin doit maintenant le valider dans Réglages → Comptes.':'L\'admin a coupé l\'accès de ce compte.')+'</p>'+
       '<div class="supa-links"><button class="btn" data-act="sb-recheck">Vérifier à nouveau</button><button class="btn ghost" data-act="sb-out">Se déconnecter</button></div></section>';
     else if(st==='error')h+='<section class="panel supa-form"><h2>Petit souci</h2><p class="supa-err">'+esc(this.err)+'</p><div class="supa-links"><button class="btn" data-act="sb-recheck">Réessayer</button><button class="btn ghost" data-act="sb-out">Se déconnecter</button></div></section>';
+    if(this.solo)h+='<p class="hint" style="margin:0">Onglet séparé : le compte connecté ici n\'affecte pas tes autres onglets. Fermer l\'onglet le déconnecte. <button class="btn ghost small" data-act="sb-tab-main">Revenir au compte principal</button></p>';
+    else if(['login','signup','forgot'].includes(st))h+='<button class="btn ghost small" style="align-self:center" data-act="sb-step" data-step="landing">← Retour à l\'accueil</button>';
     return h+'</div>';
   },
   banner(){
@@ -2944,7 +3028,9 @@ const Supa={
     const p=this.profile||{};
     let h='<div class="sync-box"><p style="margin:0">Connectée : <b>'+esc(p.email||(this.user&&this.user.email)||'')+'</b> · '+esc(SUPA_ROLES[p.role]||'')+'</p>'+
       '<p style="margin:0"><b>'+esc(this.label())+'</b>'+(Object.keys(this.out).length?' · <span class="muted">'+plural(Object.keys(this.out).length,'changement')+' en attente</span>':'')+'</p>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="sb-refresh">Actualiser</button>'+(isAdmin()?'<button class="btn" data-act="sb-import-local">Récupérer les données de cet appareil</button>':'')+'<button class="btn danger" data-act="sb-out" data-confirm="Confirmer la déconnexion">Se déconnecter</button></div></div>';
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="sb-refresh">Actualiser</button>'+(isAdmin()?'<button class="btn" data-act="sb-import-local">Récupérer les données de cet appareil</button>':'')+'<button class="btn danger" data-act="sb-out" data-confirm="Confirmer la déconnexion">Se déconnecter</button></div>'+
+      (this.solo?'<p class="hint" style="margin:0">Cet onglet est séparé : son compte n\'affecte pas tes autres onglets.</p><div><button class="btn" data-act="sb-tab-main">Revenir au compte principal</button></div>'
+        :'<p class="hint" style="margin:0">Pour tester avec un autre compte (ex. ton compte assistante de test), ouvre un nouvel onglet puis :</p><div><button class="btn" data-act="sb-tab-solo">Se connecter avec un autre compte dans cet onglet</button></div>')+'</div>';
     if(isAdmin()){
       if(!this.profiles){this.profiles=[];this.loadProfiles();}
       h+='<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><span class="label">Comptes</span><p class="hint" style="margin:4px 0 10px">Ton assistante crée son compte depuis la page de connexion, puis tu la passes en « Assistante » ici.</p><div class="supa-accounts">'+
@@ -2961,6 +3047,8 @@ const Supa={
       case 'sb-refresh':this.flush().then(()=>this.refresh());toast('Actualisation…');return true;
       case 'sb-import-local':this.importLocal();return true;
       case 'sb-dismiss':this.empty=false;render();return true;
+      case 'sb-tab-solo':this.tabSolo();return true;
+      case 'sb-tab-main':this.tabMain();return true;
     }
     return false;
   },
@@ -2984,6 +3072,105 @@ function authMsg(e){const m=errMsg(e);
   if(isNetErr(e))return 'Pas de connexion internet.';
   return m;}
 
+/* ================= v5.1 : thèmes, menu réductible, listes compactes, styles des comptes ================= */
+/* ----- Thèmes de couleurs (choisis par l'admin pour chaque vue) ----- */
+const UI_THEMES=[
+  {id:'studio',label:'Studio',l:['#F5F5FA','#FFFFFF','#ECECF3','#DDDDE7','#4636D9','#FFFFFF','#E7E4FF'],d:['#0E0E14','#17161F','#211F2C','#2E2C3B','#9389FF','#0E0E14','#25214A']},
+  {id:'jardin',label:'Jardin',l:['#F1F6F2','#FFFFFF','#E5EEE8','#D3E0D8','#2E7D5B','#FFFFFF','#DAEFE3'],d:['#0B120F','#131C18','#1A2620','#283832','#5FCB9C','#0B1410','#163428']},
+  {id:'terracotta',label:'Terracotta',l:['#F8F3EE','#FFFFFF','#F0E7DF','#E4D6CA','#B4491F','#FFFFFF','#F8E1D6'],d:['#14100D','#1E1814','#29211C','#3A2E27','#F08A5D','#170D08','#3A2219']},
+  {id:'ocean',label:'Océan',l:['#F1F6F8','#FFFFFF','#E3EDF1','#D0E0E6','#0E7490','#FFFFFF','#D5EEF4'],d:['#0B1215','#121B20','#1A262C','#27363E','#4CC3DD','#061418','#123039']},
+  {id:'prune',label:'Prune',l:['#F7F2F7','#FFFFFF','#EEE5EE','#E0D2E0','#8E3B8A','#FFFFFF','#F3DDF1'],d:['#120D12','#1B151B','#261D26','#372A37','#D88AD3','#150A14','#3A2238']},
+  {id:'vanille',label:'Vanille',l:['#F8F5EC','#FFFFFF','#EFEADB','#E2DAC4','#8F6100','#FFFFFF','#F6EBCB'],d:['#13110B','#1C1912','#27231A','#3A3426','#E6B655','#151005','#3A3018']},
+  {id:'rose',label:'Rose poudré',l:['#F9F2F4','#FFFFFF','#F1E5E9','#E5D3D9','#B8325E','#FFFFFF','#F8DCE5'],d:['#140D10','#1E1519','#2A1D23','#3D2A32','#F07FA3','#1A0A10','#40202D']},
+  {id:'nuit',label:'Nuit',dark:true,l:['#0E0E14','#17161F','#211F2C','#2E2C3B','#9389FF','#0E0E14','#25214A'],d:['#0E0E14','#17161F','#211F2C','#2E2C3B','#9389FF','#0E0E14','#25214A']}
+];
+const UI_DEFAULT={admin:'studio',assistant:'jardin'};
+function hexLum(h){const m=/^#?([0-9a-f]{6})$/i.exec(h||'');if(!m)return 0;const n=parseInt(m[1],16);const c=[n>>16&255,n>>8&255,n&255].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);});return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+function uiThemeOf(who){const u=settings().uiThemes||{};const id=u[who]||UI_DEFAULT[who];
+  if(id==='custom'){const a=/^#[0-9a-f]{6}$/i.test((u.custom||{})[who]||'')?u.custom[who]:'#4636D9';const fg=hexLum(a)>.4?'#111111':'#FFFFFF';
+    return {id:'custom',label:'Couleur perso',accent:a,
+      l:['color-mix(in srgb,'+a+' 4%,#F7F7FA)','#FFFFFF','color-mix(in srgb,'+a+' 8%,#EEEEF3)','color-mix(in srgb,'+a+' 14%,#DDDDE7)',a,fg,'color-mix(in srgb,'+a+' 16%,#FFFFFF)'],
+      d:['color-mix(in srgb,'+a+' 6%,#0E0E14)','color-mix(in srgb,'+a+' 6%,#17161F)','color-mix(in srgb,'+a+' 9%,#211F2C)','color-mix(in srgb,'+a+' 14%,#2E2C3B)','color-mix(in srgb,'+a+' 70%,#FFFFFF)','#0E0E14','color-mix(in srgb,'+a+' 28%,#0E0E14)']};}
+  return UI_THEMES.find(t=>t.id===id)||UI_THEMES.find(t=>t.id===UI_DEFAULT[who]);}
+function themeVars(v,dark){return '--bg:'+v[0]+';--surface:'+v[1]+';--surface-2:'+v[2]+';--line:'+v[3]+';--accent:'+v[4]+';--accent-fg:'+v[5]+';--accent-soft:'+v[6]+';'+
+  (dark?'--fg:#ECEBF4;--muted:#9C9AAE;--late:#FF6E5A;--ok:#33C79F;--warn:#F0B429;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);color-scheme:dark;':'');}
+let uiThemeCss='';
+function applyUiTheme(){
+  let css='';
+  ['admin','assistant'].forEach(who=>{const t=uiThemeOf(who);const sel='body[data-role="'+who+'"].th-on';
+    if(t.dark){css+=':root '+sel+','+':root:not([data-theme="light"]) '+sel+'.th-on,:root[data-theme="dark"] '+sel+'.th-on{'+themeVars(t.d,true)+'}';}
+    else{css+=':root '+sel+'{'+themeVars(t.l,false)+'}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) '+sel+'.th-on{'+themeVars(t.d,false)+'}}:root[data-theme="dark"] '+sel+'.th-on{'+themeVars(t.d,false)+'}';}
+    css+=sel+' .brand-mark,'+sel+' .nav-new,'+sel+' .fab{background:var(--accent);color:var(--accent-fg)}';});
+  if(css!==uiThemeCss){uiThemeCss=css;let el=document.getElementById('ui-theme');if(!el){el=document.createElement('style');el.id='ui-theme';document.head.appendChild(el);}el.textContent=css;}
+  document.body.classList.add('th-on');
+}
+function uiThemePanel(){
+  const u=settings().uiThemes||{};
+  const row=(who,title)=>{const cur=u[who]||UI_DEFAULT[who];const cc=(u.custom||{})[who]||'#C2416B';
+    return '<div class="th-row"><span class="label">'+esc(title)+'</span><div class="th-grid">'+UI_THEMES.map(t=>
+      '<button type="button" class="th-sw" data-act="ui-theme" data-who="'+who+'" data-t="'+t.id+'" aria-pressed="'+(cur===t.id)+'" style="--sb:'+t.l[0]+';--sa:'+t.l[4]+';--ss:'+t.l[6]+';--sd:'+t.d[0]+'"><span class="th-prev"><i></i><i></i><i></i></span>'+esc(t.label)+'</button>').join('')+
+      '<label class="th-sw th-custom" aria-pressed="'+(cur==='custom')+'" style="--sa:'+esc(cc)+'"><span class="th-prev"><input type="color" value="'+esc(cc)+'" data-ui-custom="'+who+'" aria-label="Couleur perso"></span>Couleur perso</label></div></div>';};
+  return '<section class="panel"><div class="panel-h"><h2>Couleurs de l\'interface</h2></div><p class="hint" style="margin:-4px 0 12px">Choisis l\'assemblage de couleurs de chaque vue. Il s\'applique sur tous les appareils. Chaque thème a sa version sombre quand l\'appareil est en mode nuit.</p>'+
+    row('admin','Ta vue (admin)')+row('assistant','Vue de '+roleName('assistant'))+'</section>';
+}
+/* ----- Menu latéral réductible ----- */
+const LS_NAVMINI='studio-tefi-nav-mini';
+function applyNavMini(){document.body.classList.toggle('nav-mini',!!lsGet(LS_NAVMINI));const b=$('#nav-toggle');if(b){const on=!!lsGet(LS_NAVMINI);b.setAttribute('aria-label',on?'Afficher le menu':'Réduire le menu');b.title=on?'Afficher le menu':'Réduire le menu';}
+  document.querySelectorAll('#nav .nav-btn').forEach(x=>{const t=(x.textContent||'').replace(/\s+/g,' ').replace(/\d+$/,'').trim();if(t)x.title=t;});}
+/* ----- Fiches repliables (entreprises, clients) ----- */
+const OPEN={};
+function miniRow(key,color,name,meta,acts,editLabel){
+  return '<section class="panel mini-row"><span class="dot" style="--c:'+esc(color||'#8A8FA3')+'"></span><div class="mini-main"><b>'+esc(name)+'</b>'+(meta?'<span class="hint">'+esc(meta)+'</span>':'')+'</div>'+
+    '<div class="mini-acts">'+acts+'<button class="btn small" data-act="fold" data-key="'+esc(key)+'">'+ICON_EDIT+esc(editLabel)+'</button></div></section>';}
+const ICON_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+const foldBtn=key=>'<button class="btn small ghost" data-act="fold" data-key="'+esc(key)+'">Réduire</button>';
+function profMini(p,used){const meta=[p.activity,p.country,p.nif?'NIF '+p.nif:'',p.email].filter(Boolean).join(' · ');
+  return miniRow('prof:'+p.id,p.color||'#4636D9',p.name||'Sans nom',meta+(meta?' · ':'')+plural(used,'document'),
+    '<button class="btn small" data-act="doc-new" data-kind="facture" data-prof="'+esc(p.id)+'">'+ICON.plus+'Facture</button><button class="btn small" data-act="doc-new" data-kind="devis" data-prof="'+esc(p.id)+'">'+ICON.plus+'Devis</button>','Modifier');}
+function clientMini(c,next,pj,nd,ed){const meta=[c.contact,c.country,c.email,next?'RDV '+fmtShort(next.date):'',nd?plural(nd,'document'):''].filter(Boolean).join(' · ');
+  return miniRow('cl:'+c.id,c.color,c.label||'Sans nom',meta,
+    (can('devis')?'<button class="btn small" data-act="doc-new" data-kind="devis" data-comp="'+esc(c.id)+'">'+ICON.plus+'Devis</button>':'')+(can('factures')?'<button class="btn small" data-act="doc-new" data-kind="facture" data-comp="'+esc(c.id)+'">'+ICON.plus+'Facture</button>':''),ed?'Modifier':'Voir la fiche');}
+/* ----- Réseaux : résumé et style de chaque compte ----- */
+function accStats(a){const t=today();let prep=0,pub=0,next=null;
+  contents().forEach(c=>(c.publications||[]).forEach(p=>{if(p.accountId!==a.id)return;
+    if(p.done||c.status==='publie')pub++;else{prep++;if(isValidDate(p.date)&&p.date>=t&&(!next||p.date<next.date))next={date:p.date,time:p.time,title:titleOf(c)};}}));
+  return {prep,pub,next};}
+function accSummaryPanel(){
+  const accs=accounts();if(!accs.length)return '';const st=settings();const ed=can('accounts');
+  return '<section class="panel"><div class="panel-h"><h2>Résumé des comptes</h2><span class="mono muted">'+accs.length+'</span></div><div class="acc-sum">'+accs.map(a=>{const s=accStats(a);const pl=platOf(a.platform);const styles=(a.styles||[]).map(id=>themeOf(id)).filter(Boolean);
+    const open=OPEN['acc:'+a.id];
+    let h='<div class="acc-card"><div class="acc-card-h"><span class="dot" style="--c:'+esc(pl.color)+'"></span><div class="mini-main"><b>'+esc(a.handle)+'</b><span class="hint">'+esc(pl.label)+'</span></div>'+natBadge(a)+'</div>'+
+      '<div class="acc-nums"><div><b>'+s.prep+'</b><span>en préparation</span></div><div><b>'+s.pub+'</b><span>publiés</span></div><div><b>'+(a.followers?esc(compactNum(a.followers)):'—')+'</b><span>abonnés</span></div></div>'+
+      '<p class="acc-next">'+(s.next?'Prochaine : <b>'+esc(fmtShort(s.next.date))+(s.next.time?' · '+esc(s.next.time):'')+'</b> · '+esc(s.next.title):'<span class="muted">Aucune publication prévue</span>')+'</p>'+
+      '<div class="card-f">'+(styles.length?styles.map(t=>'<span class="pill plain">'+esc(t.label)+'</span>').join(''):'<span class="hint">Style non défini</span>')+'</div>'+(a.tone?'<p class="acc-tone">« '+esc(a.tone)+' »</p>':'');
+    if(open&&ed){h+='<div class="acc-style"><span class="label">Style de contenu</span><div class="chip-pick">'+st.themes.map(t=>'<button type="button" data-act="acc-style" data-id="'+esc(a.id)+'" data-t="'+esc(t.id)+'" aria-pressed="'+(a.styles||[]).includes(t.id)+'">'+esc(t.label)+'</button>').join('')+'</div>'+
+      '<label class="field"><span>Ton et ligne éditoriale</span><input class="inp" id="acc-tone-'+esc(a.id)+'" data-acc-tone="'+esc(a.id)+'" value="'+esc(a.tone||'')+'" placeholder="Ex. : fun, face caméra, vidéos courtes"></label>'+
+      '<div class="card-f"><button class="btn small" data-act="fold" data-key="acc:'+esc(a.id)+'">Terminé</button><span class="hint">Les thématiques se gèrent dans Réglages.</span></div></div>';}
+    else if(ed)h+='<div class="card-f"><button class="btn small ghost" data-act="fold" data-key="acc:'+esc(a.id)+'">'+ICON_EDIT+'Définir le style</button></div>';
+    return h+'</div>';}).join('')+'</div></section>';
+}
+function compactNum(n){n=+n||0;return n>=1e6?(n/1e6).toFixed(1).replace('.0','').replace('.',',')+' M':n>=1e4?Math.round(n/1e3)+' k':n>=1e3?(n/1e3).toFixed(1).replace('.0','').replace('.',',')+' k':String(n);}
+function matchingAccounts(c){const th=c.themes||[];if(!th.length)return [];const used=new Set((c.publications||[]).map(p=>p.accountId));
+  return accounts().filter(a=>(a.styles||[]).some(id=>th.includes(id))&&!used.has(a.id));}
+function suggestAccHtml(c){const m=matchingAccounts(c);if(!m.length)return '';
+  return '<div class="acc-suggest"><span class="hint">Comptes qui correspondent aux thématiques :</span>'+m.map(a=>'<button class="btn small" data-act="ed-addpub-acc" data-acc="'+esc(a.id)+'">'+ICON.plus+esc(a.handle)+'</button>').join('')+'</div>';}
+/* ----- Page d'accueil (version GitHub, avant connexion) ----- */
+function landingHtml(){
+  const ic=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+  const feats=[
+    [ic('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),'Planning & calendrier','Toutes les publications, les tournages et les rendez-vous au même endroit, au jour, à la semaine ou au mois.'],
+    [ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>'),'Projets & tournages','Chaque contenu suit son chemin : écriture, production, tournage, montage, validation des versions, publication.'],
+    [ic('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),'Idées & validation','L\'assistante propose des idées avec ses références, Tefi les valide, les refuse ou les renvoie à retravailler.'],
+    [ic('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>'),'Business','Rendez-vous, clients, devis, factures et suivi des paiements, avec des documents prêts à envoyer en PDF.']];
+  return '<div class="land"><header class="land-top"><div class="brand"><div class="brand-mark">T</div><b>Studio Tefi</b></div><button class="btn" data-act="sb-step" data-step="login">Se connecter</button></header>'+
+    '<section class="land-hero"><span class="label">Espace de travail privé</span><h1>Le studio de production de Tefi</h1>'+
+    '<p>Studio Tefi est un outil créé spécialement pour Tefi et son travail d\'assistanat. Il réunit au même endroit les idées, les projets, les tournages, le planning des publications et le suivi business, sur téléphone, tablette et ordinateur.</p>'+
+    '<div class="land-cta"><button class="btn primary" data-act="sb-step" data-step="login">Se connecter</button><button class="btn" data-act="sb-step" data-step="signup">Pas de compte ? Inscris-toi</button></div></section>'+
+    '<section class="land-feats">'+feats.map(f=>'<div class="land-feat"><span class="land-ic">'+f[0]+'</span><h3>'+esc(f[1])+'</h3><p>'+esc(f[2])+'</p></div>').join('')+'</section>'+
+    '<section class="land-steps"><h2>Comment rejoindre l\'espace</h2><ol><li><b>Crée ton compte</b><span>avec ton adresse e-mail et un mot de passe.</span></li><li><b>Tefi valide ton accès</b><span>chaque compte est vérifié avant d\'ouvrir l\'espace.</span></li><li><b>Retrouve tout, partout</b><span>le planning se met à jour en direct sur tous tes appareils.</span></li></ol></section>'+
+    '<footer class="land-foot"><span class="dot" style="--c:var(--ok)"></span>Accès privé, sur invitation. Les comptes sont validés par Tefi.</footer></div>';
+}
+
 /* ================= Rendu ================= */
 const VIEWS={home:viewHome,networks:viewNetworks,calendar:viewCalendar,contents:viewContents,ideas:viewIdeas,projection:viewProjection,search:viewSearch,business:viewBusiness,settings:viewSettings,more:viewMore};
 let rq=false;
@@ -2996,7 +3183,7 @@ function render(){
   if(ae&&ae.id&&main.contains(ae)){fid=ae.id;try{s0=ae.selectionStart;s1=ae.selectionEnd;}catch(e){}}
   const kept={};main.querySelectorAll('form input[id]').forEach(i=>{if(i.value&&i.type!=='color')kept[i.id]=i.value;});
   const board=$('#board');const bl=board?board.scrollLeft:0;
-  document.body.dataset.role=ROLE||'none';
+  document.body.dataset.role=ROLE||'none';applyUiTheme();
   if(!ROLE){document.body.classList.add('gated');main.innerHTML=viewGate();const pi=$('#gate-pin');if(pi)pi.focus();return;}
   document.body.classList.remove('gated');applyPermClasses();
   if(!isAdmin()&&S.ui.view==='settings')S.ui.view='home';
@@ -3203,7 +3390,7 @@ function renderEditor(){
     '<label class="field"><span>Durée</span><input class="inp" id="ed-duration" data-f="duration" value="'+esc(c.duration)+'" placeholder="ex. 60 s, 12 min"></label></div>'+
     '<div class="field"><span>Thématiques</span><div class="theme-pick">'+S2.themes.map(t=>'<button type="button" data-act="ed-theme" data-t="'+esc(t.id)+'" aria-pressed="'+c.themes.includes(t.id)+'">'+esc(t.label)+'</button>').join('')+'</div></div>'+
     '<div class="field"><span>Statut</span><div class="status-pick">'+STATUSES.map(s=>'<button type="button" data-act="ed-status" data-s="'+s.id+'" style="--c:'+s.c+'" aria-pressed="'+(c.status===s.id)+'"><span class="dot" style="--c:'+s.c+'"></span>'+s.label+'</button>').join('')+'</div></div></div>';
-  h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Diffusion'+(distLabel(c)?' <span class="pill plain" style="vertical-align:middle">'+esc(distLabel(c))+'</span>':'')+'</h2><button class="btn small" data-act="ed-addpub">'+ICON.plus+'Ajouter une diffusion</button></div>';
+  h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Diffusion'+(distLabel(c)?' <span class="pill plain" style="vertical-align:middle">'+esc(distLabel(c))+'</span>':'')+'</h2><button class="btn small" data-act="ed-addpub">'+ICON.plus+'Ajouter une diffusion</button></div>'+suggestAccHtml(c);
   if(!accounts().length)h+='<p class="hint" style="margin:0">Aucun compte enregistré. <button class="btn ghost small" data-act="ed-goto-networks">Ajouter tes comptes</button></p>';
   h+=c.publications.length?c.publications.map(p=>'<div class="pub'+(p.done?' isdone':'')+'"><div class="pub-acc">'+chanSelect(p)+accSelect(p)+'</div>'+
       '<input class="inp" type="date" id="pd-'+esc(p.id)+'" data-pf="date" data-pid="'+esc(p.id)+'" value="'+esc(p.date)+'" aria-label="Date de publication">'+
@@ -3334,6 +3521,8 @@ document.addEventListener('click',e=>{
     case 'ed-goto-networks':closeEditor();go('networks');break;
     case 'ed-status':draft.status=el.dataset.s;if(draft.status==='publie')draft.publications.forEach(p=>{p.done=true;});scheduleSave();renderEditor();break;
     case 'ed-theme':{const t=el.dataset.t;draft.themes=draft.themes.includes(t)?draft.themes.filter(x=>x!==t):draft.themes.concat([t]);scheduleSave();renderEditor();break;}
+    case 'ed-addpub-acc':{const a=S.accounts[el.dataset.acc];if(!a||!draft)break;const last=draft.publications[draft.publications.length-1];
+      draft.publications.push({id:uid(),channel:platOf(a.platform).channel||'social',accountId:a.id,date:last?last.date:today(),time:last?last.time:'',done:false});if(draft.status==='idee')draft.status='ecriture';scheduleSave();renderEditor();break;}
     case 'ed-addpub':{const last=draft.publications[draft.publications.length-1];const f=S.ui.filters;
       draft.publications.push({id:uid(),channel:last?(pubChannel(last)||'social'):(f.channel||'social'),accountId:f.account||'',date:last?last.date:today(),time:last?last.time:'',done:false});
       if(draft.status==='idee')draft.status='ecriture';scheduleSave();renderEditor();break;}
@@ -3358,6 +3547,8 @@ function copyText(txt,ok,fallbackEl){
 }
 /* Champs de la vue principale */
 document.addEventListener('change',e=>{
+  if(e.target.dataset&&e.target.dataset.uiCustom&&isAdmin()){const who=e.target.dataset.uiCustom,v=e.target.value;updateSettings(s=>{s.uiThemes=Object.assign({},s.uiThemes||{});s.uiThemes.custom=Object.assign({},s.uiThemes.custom||{});s.uiThemes.custom[who]=v;s.uiThemes[who]='custom';},'Couleur perso de l\'interface');return;}
+  if(e.target.dataset&&e.target.dataset.accTone){if(!can('accounts')){toast(DENIED);return;}const acc=S.accounts[e.target.dataset.accTone];if(acc&&(acc.tone||'')!==e.target.value.trim())updateAccount(acc.id,{tone:e.target.value.trim()});return;}
   if(e.target.dataset&&e.target.dataset.sbrole&&S.mode==='supa'&&isAdmin()){Supa.setProfileRole(e.target.dataset.sbrole,e.target.value);return;}
   const el=e.target;if(!$('#main').contains(el))return;
   if(handleM4Change(el))return;
@@ -3437,6 +3628,7 @@ window.addEventListener('storage',e=>{
   if(e.key===LS_DATA&&S.mode==='local'&&e.newValue){try{applyLocal(JSON.parse(e.newValue));scheduleRender();}catch(x){}}
   if(e.key===LS_GIST){Sync.cfg=lsGet(LS_GIST);renderSync();}
 });
+applyNavMini();
 startStore();
 })();
 </script>

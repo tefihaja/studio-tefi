@@ -1,5 +1,5 @@
 -- =====================================================================
---  Studio Tefi · installation Supabase (version 5.0)
+--  Studio Tefi · installation Supabase (version 5.1)
 --  À coller en entier dans Supabase → SQL Editor → New query → Run.
 --  Le script peut être relancé sans risque : il ne supprime aucune donnée.
 -- =====================================================================
@@ -173,7 +173,8 @@ begin
   if (new.data -> 'perms') is distinct from (old.data -> 'perms')
      or (new.data -> 'pinHash') is distinct from (old.data -> 'pinHash')
      or (new.data -> 'profiles') is distinct from (old.data -> 'profiles')
-     or (new.data -> 'assistantName') is distinct from (old.data -> 'assistantName') then
+     or (new.data -> 'assistantName') is distinct from (old.data -> 'assistantName')
+     or (new.data -> 'uiThemes') is distinct from (old.data -> 'uiThemes') then
     raise exception 'Réglage réservé à l''admin' using errcode = '42501';
   end if;
   if (new.data -> 'companies') is distinct from (old.data -> 'companies') and not public.perm('clients') then
