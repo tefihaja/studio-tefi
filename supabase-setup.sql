@@ -1,5 +1,5 @@
 -- =====================================================================
---  Studio Tefi · installation Supabase (version 6.0)
+--  Studio Tefi · installation Supabase (version 6.1)
 --  À coller en entier dans Supabase → SQL Editor → New query → Run.
 --  Le script peut être relancé sans risque : il ne supprime aucune donnée.
 -- =====================================================================
@@ -47,9 +47,9 @@ create table if not exists public.items (
   primary key (col, id)
 );
 create index if not exists items_col_updated on public.items (col, updated_at desc);
--- Types d'éléments autorisés (mis à jour en 6.0 : tâches et demandes)
+-- Types d'éléments autorisés (mis à jour en 6.1 : déplacements, indisponibilités et projets)
 alter table public.items drop constraint if exists items_col_check;
-alter table public.items add constraint items_col_check check (col in ('contents','accounts','rdv','docs','media','deals','contacts','history','tasks','requests'));
+alter table public.items add constraint items_col_check check (col in ('contents','accounts','rdv','docs','media','deals','contacts','history','tasks','requests','trips','unavail','projects'));
 
 create table if not exists public.app_settings (
   id          text primary key default 'main' check (id = 'main'),
@@ -80,7 +80,7 @@ returns boolean language sql stable security definer set search_path = public as
       ('{"projEdit":true,"projStatus":true,"projDelete":false,"projection":true,"budget":true,"calMove":true,
          "ideaDeleteOwn":true,"accounts":true,"stats":true,"rdv":true,"clients":true,"devis":true,"factures":true,
          "toCollect":true,"suivis":true,"payStatus":true,"entreprises":true,"prestaEdit":false,"collabs":true,
-         "contacts":true,"history":false,"requests":true}'::jsonb ->> k)::boolean,
+         "contacts":true,"history":false,"requests":true,"trips":true,"projets":true}'::jsonb ->> k)::boolean,
       false)
   end
 $$;
@@ -99,6 +99,8 @@ returns boolean language sql stable security definer set search_path = public as
     when c = 'contacts' then public.perm('contacts')
     when c = 'history'  then public.perm('history')
     when c in ('tasks','requests') then true
+    when c = 'trips'    then public.perm('trips')
+    when c in ('unavail','projects') then true
     else false
   end
 $$;
@@ -151,6 +153,9 @@ begin
       when 'contacts' then public.perm('contacts')
       when 'tasks'    then true
       when 'requests' then public.perm('requests')
+      when 'trips'    then public.perm('trips')
+      when 'unavail'  then coalesce(new.data ->> 'who','') = 'assistant'
+      when 'projects' then public.perm('projets') and coalesce(new.data ->> 'createdBy','') = 'assistant'
       else false end;
   else
     ok := case new.col
@@ -164,6 +169,11 @@ begin
       when 'contacts' then public.perm('contacts')
       when 'tasks'    then coalesce(new.data ->> 'owner','') <> 'admin' or coalesce(new.data ->> 'assignedBy','') = 'admin'
       when 'requests' then public.perm('requests')
+      when 'trips'    then public.perm('trips')
+      -- l'assistante ne fait que des demandes : jamais validées par elle-même, jamais sur les dates de Tefi
+      when 'unavail'  then coalesce(new.data ->> 'who','') = 'assistant' and coalesce(new.data ->> 'status','') = 'pending'
+                           and (tg_op = 'INSERT' or coalesce(old.data ->> 'who','') = 'assistant')
+      when 'projects' then public.perm('projets')
       else false end;
   end if;
   if not ok then raise exception 'Action non autorisée pour l''assistante' using errcode = '42501'; end if;
@@ -191,6 +201,7 @@ begin
      or (new.data -> 'uiThemes') is distinct from (old.data -> 'uiThemes')
      or (new.data -> 'signature') is distinct from (old.data -> 'signature')
      or (new.data -> 'showAssistPlan') is distinct from (old.data -> 'showAssistPlan')
+     or (new.data -> 'offPersoMax') is distinct from (old.data -> 'offPersoMax')
      or (new.data -> 'homeLayout' -> 'admin') is distinct from (old.data -> 'homeLayout' -> 'admin') then
     raise exception 'Réglage réservé à l''admin' using errcode = '42501';
   end if;

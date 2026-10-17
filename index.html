@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Studio Tefi · version 6.0.2 · 17 octobre 2026 -->
+<!-- Studio Tefi · version 6.1 · 17 octobre 2026 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=Courier+Prime:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="app.css?v=6.0.2">
+<link rel="stylesheet" href="app.css?v=6.1">
 
 
 <script>
@@ -30,7 +30,8 @@ window.STUDIO_SUPA={url:'https://yqtzbwgjilyemvbtgbzg.supabase.co',key:'sb_publi
     <button class="nav-btn" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Résumé</button>
     <button class="nav-btn" data-nav="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendrier</button>
     <button class="nav-btn" data-nav="contents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg>Contenus<span class="count" id="cnt-contents"></span></button>
-    <button class="nav-btn" data-nav="projection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>Projection<span class="count" id="cnt-pj"></span></button>
+    <button class="nav-btn nav-desk" data-nav="projets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5M3 16.5l9 4.5 9-4.5"/></svg>Projets<span class="count" id="cnt-prj"></span></button>
+    <button class="nav-btn" data-nav="projection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>Validation<span class="count" id="cnt-pj"></span></button>
     <button class="nav-btn nav-desk" data-nav="ideas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>Idées<span class="count" id="cnt-ideas"></span></button>
     <button class="nav-btn nav-desk" data-nav="plans" id="nav-plans" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="nav-plans-l">Plans de travail</span><span class="count" id="cnt-plans"></span></button>
     <button class="nav-btn" data-nav="business"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg>Business<span class="count" id="cnt-biz"></span></button>
@@ -59,7 +60,7 @@ window.STUDIO_SUPA={url:'https://yqtzbwgjilyemvbtgbzg.supabase.co',key:'sb_publi
 <div class="peek" id="inboxm" hidden><div class="peek-panel" id="inbox-panel" role="dialog" aria-modal="true" aria-label="À traiter"></div></div>
 <input type="file" id="import-file" accept="application/json,.json" hidden>
 
-<script src="app.js?v=6.0.2"></script>
+<script src="app.js?v=6.1"></script>
 
 </body>
 </html>

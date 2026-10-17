@@ -39,8 +39,9 @@ function touch(){DV++;}
 function memo(key,fn){const e=MEMO.get(key);if(e&&e.dv===DV)return e.v;const v=fn();if(MEMO.size>300)MEMO.clear();MEMO.set(key,{dv:DV,v});return v;}
 let renderHidden=false;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&renderHidden){renderHidden=false;scheduleRender();}});
-const APP_VERSION='6.0.2';
+const APP_VERSION='6.1';
 const VERSIONS=[
+{v:'6.1',date:'2026-10-17',items:['Déplacements dans le calendrier : perso ou pro (production vidéo ou musique), budget ou prise en charge pour le pro, et onglet Déplacements dans Business','Indisponibilités : Tefi les inscrit directement, l\'assistante fait une demande que Tefi valide ou refuse avec une justification (option « Raison perso » avec repère anti-abus)','Nouvel onglet Projets : type, univers, sortie visée (date ou période), objectifs à cocher avec barre d\'avancement, contenus et déplacements liés, « Créé par »','Script : écriture en texte libre et import de fichiers (texte et Word recopiés, PDF joint)','Projection devient Validation ; blocs « Projets en cours » et « Absences et déplacements » dans le résumé']},
 {v:'6.0.2',date:'2026-10-17',items:['Page d\'accueil : vidéo de bienvenue pour l\'assistante']},
 {v:'6.0.1',date:'2026-10-16',items:['Correction (comptes en ligne) : les actions de l\'assistante ne sont plus refusées à cause de l\'historique']},
 {v:'6.0',date:'2026-10-16',items:['Optimisation complète : l\'écran ne met à jour que ce qui change, les calculs sont mémorisés, rien ne tourne quand l\'onglet est caché (jusqu\'à 10× plus rapide avec beaucoup de données)','Données plus légères : l\'historique ne garde que ce qui a changé, logos rangés dans l\'espace de stockage, sauvegardes groupées','Version GitHub découpée en fichiers gardés en mémoire par le navigateur','Résumés différents pour l\'admin et l\'assistante, personnalisables (ordre et blocs affichés) : À traiter, rendez-vous du mois, projets du mois, le mois en chiffres, point de la semaine','Priorités des rendez-vous (Facultatif → Impératif) : calendrier, filtre, rappels plus tôt pour les impératifs','Plans de travail de l\'assistante : tâches Urgent → Facultatif, étapes, répétitions, rappels, modèles, tâches privées et tâches automatiques ; visibles chez l\'admin seulement quand elle le décide','Demandes à Tefi : signature, statut de facture, rushs, publication, dépense, question ; fil de discussion, « Relancer Tefi » après 24 h, fermeture automatique','Cloche « À traiter » avec notifications, et bouton « Traiter » qui t\'emmène au bon endroit','Signature dessinée ou importée, cachet par entreprise, « Demander la signature » et « Signer » : PDF signé figé, signature retirée si le document change']},
@@ -191,11 +192,11 @@ function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
 const toMap=a=>{const m={};(a||[]).forEach(x=>{if(x&&x.id)m[x.id]=x;});return m;};
 const savedUI=lsGet(LS_UI)||{};
-const S={contents:{},accounts:{},rdv:{},docs:{},media:{},deals:{},contacts:{},tasks:{},requests:{},deleted:{},settings:null,history:[],mode:'pending',loaded:false,
+const S={contents:{},accounts:{},rdv:{},docs:{},media:{},deals:{},contacts:{},tasks:{},requests:{},trips:{},unavail:{},projects:{},deleted:{},settings:null,history:[],mode:'pending',loaded:false,
 ui:Object.assign({calMode:'month',cursor:today(),selDay:today(),showProd:true,listMode:'board',search:'',ideaType:'concept',homeSel:'upcoming',showRdv:true,bizTab:'rdv',rdvFilter:''},savedUI)};
 S.ui.view='home';S.ui.cursor=today();S.ui.selDay=today();
 S.ui.filters=Object.assign({channel:'',platform:'',account:'',nature:'',type:'',theme:'',status:''},savedUI.filters||{});
-const VIEW_IDS=['home','networks','calendar','contents','ideas','projection','business','settings','more','search','plans'];
+const VIEW_IDS=['home','networks','calendar','contents','projets','ideas','projection','business','settings','more','search','plans'];
 let hashView=null;if(location.hash){const h=location.hash.slice(1);if(VIEW_IDS.includes(h))hashView=h;}
 if(hashView)S.ui.view=hashView;
 const saveUI=()=>{const u=Object.assign({},S.ui);delete u.view;lsSet(LS_UI,u);};
@@ -219,12 +220,12 @@ const accLabel=a=>a?a.handle:'Sans compte';
 const accColor=a=>a?platOf(a.platform).color:'#8A8FA3';
 const titleOf=c=>c&&c.title&&c.title.trim()?c.title:'Sans titre';
 const natBadge=a=>!a?'':a.nature==='pro'?'<span class="nat pro">Pro</span>':a.nature==='perso'?'<span class="nat">Perso</span>':'<span class="nat unset" title="Nature à préciser dans Réseaux">?</span>';
-function normContent(c){c=Object.assign({title:'',type:'',themes:[],status:'ecriture',publications:[],shoots:null,editDate:'',duration:'',cast:'',gear:'',scenes:[],caption:'',hashtags:'',notes:''},c);
+function normContent(c){c=Object.assign({title:'',type:'',themes:[],status:'ecriture',publications:[],shoots:null,editDate:'',duration:'',cast:'',gear:'',scenes:[],caption:'',hashtags:'',notes:'',scriptMode:'scenes',scriptText:'',scriptFiles:[]},c);
 if(!Array.isArray(c.shoots)){c.shoots=(isValidDate(c.shootDate)||c.location)?[{id:'s0',start:isValidDate(c.shootDate)?c.shootDate:'',end:'',location:c.location||'',note:''}]:[];}
 delete c.shootDate;delete c.location;
 if(!Array.isArray(c.checklist))c.checklist=[];if(!Array.isArray(c.comments))c.comments=[];if(!Array.isArray(c.expenses))c.expenses=[];
 if(!Array.isArray(c.links))c.links=[];if(!Array.isArray(c.targets))c.targets=[];if(!c.author)c.author='admin';if(c.status==='idee'&&!c.ideaState)c.ideaState='validee';
-if(!Array.isArray(c.themes))c.themes=[];if(!Array.isArray(c.publications))c.publications=[];if(!Array.isArray(c.scenes))c.scenes=[];return c;}
+if(!Array.isArray(c.themes))c.themes=[];if(!Array.isArray(c.publications))c.publications=[];if(!Array.isArray(c.scenes))c.scenes=[];if(!Array.isArray(c.scriptFiles))c.scriptFiles=[];return c;}
 let DB=null;
 const wq=new Map();
 function enqueue(key,job){const e=wq.get(key)||{busy:false,next:null};e.next=job;wq.set(key,e);if(!e.busy)pump(e);}
@@ -236,7 +237,7 @@ else if(code==='quota_exceeded')toast("Espace plein : supprime d'anciens contenu
 else if(code==='unavailable')toast('Connexion instable, réessaie dans un instant.');
 else toast('Enregistrement impossible ('+(code||'erreur')+').');
 }
-const COLS={contents:'c',accounts:'a',rdv:'r',docs:'d',media:'m',deals:'p',contacts:'k',tasks:'t',requests:'q'};
+const COLS={contents:'c',accounts:'a',rdv:'r',docs:'d',media:'m',deals:'p',contacts:'k',tasks:'t',requests:'q',trips:'v',unavail:'u',projects:'j'};
 function pruneTombs(){const lim=Date.now()-60*864e5;Object.keys(S.deleted).forEach(k=>{if(S.deleted[k]<lim)delete S.deleted[k];});}
 function localPayload(){pruneTombs();const o={settings:S.settings,history:S.history.slice(0,HMAX_LOCAL),deleted:S.deleted};Object.keys(COLS).forEach(c=>{o[c]=S[c];});return o;}
 function persistLocal(){if(S.mode!=='local')return;clearTimeout(plT);plT=setTimeout(persistLocalNow,250);Sync.schedulePush();}
@@ -373,7 +374,7 @@ if(f.theme&&!(c.themes||[]).includes(f.theme))return false;
 if(f.channel||f.account||f.platform||f.nature)return(c.publications||[]).some(p=>passAcc(S.accounts[p.accountId],p));return true;}
 function events(opt){
 opt=Object.assign({filtered:true,prod:S.ui.showProd},opt||{});
-const key='ev|'+ROLE+'|'+JSON.stringify(opt)+'|'+(opt.filtered?JSON.stringify(S.ui.filters):'')+'|'+S.ui.showRdv+'|'+(S.ui.rdvPrio||'');
+const key='ev|'+ROLE+'|'+JSON.stringify(opt)+'|'+(opt.filtered?JSON.stringify(S.ui.filters):'')+'|'+S.ui.showRdv+'|'+S.ui.showTrips+'|'+S.ui.showOff+'|'+(S.ui.rdvPrio||'');
 return memo(key,()=>eventsRaw(opt)).slice();
 }
 function eventsRaw(opt){
@@ -395,6 +396,7 @@ if(opt.rdv!==false&&(opt.rdv||S.ui.showRdv)&&!(opt.filtered&&filtersActive())&&c
 const rp=opt.filtered&&S.ui.rdvPrio?prioRank(S.ui.rdvPrio):0;
 Object.values(S.rdv).forEach(x=>{if(isValidDate(x.date)&&(!rp||prioRank(x.priority)>=rp))out.push({kind:'rdv',date:x.date,time:x.start||'',r:x});});
 }
+if(opt.extra)v61Events(opt,out);
 out.sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:(x.time||'99')<(y.time||'99')?-1:1);
 return out;
 }
@@ -462,19 +464,19 @@ return'<form class="quick-acc need-accounts" data-form="acc"><select class="inp"
 }
 function homeList(sel){
 const t=today(),ws=weekStart(t),we=addDays(ws,6);
-const all=events({filtered:false,prod:false,rdv:false});const allR=events({filtered:false,prod:false,rdv:true});
+const all=events({filtered:false,prod:false,rdv:false});const allR=events({filtered:false,prod:false,rdv:true,extra:true,allExtra:true,collapse:true});
 const cs=contents();
-if(sel==='week')return{title:'Cette semaine',items:events({filtered:false,prod:true,rdv:true}).filter(e=>e.date>=ws&&e.date<=we),kind:'ev',empty:'Rien de prévu cette semaine.'};
+if(sel==='week')return{title:'Cette semaine',items:events({filtered:false,prod:true,rdv:true,extra:true,allExtra:true,collapse:true}).filter(e=>e.date>=ws&&e.date<=we),kind:'ev',empty:'Rien de prévu cette semaine.'};
 if(sel==='late')return{title:'En retard',items:all.filter(isLate),kind:'ev',empty:'Aucune publication en retard.'};
 if(sel==='prod')return{title:'En cours',items:cs.filter(c=>['ecriture','production','tournage','montage','pret'].includes(c.status)).sort((a,b)=>STATUSES.findIndex(s=>s.id===a.status)-STATUSES.findIndex(s=>s.id===b.status)),kind:'c',empty:'Aucun contenu en cours.'};
 if(sel==='ideas')return{title:isAdmin()?'Propositions à traiter':'Mes idées à retravailler',items:ideasToHandle(),kind:'c',empty:isAdmin()?'Aucune proposition en attente.':'Rien à retravailler.'};
-if(sel&&sel.startsWith('day:')){const d=sel.slice(4);return{title:fmtDay(d),items:events({filtered:false,prod:true,rdv:true}).filter(e=>e.date===d),kind:'ev',empty:'Rien de prévu ce jour-là.',day:d};}
-return{title:'À venir · 14 jours',items:allR.filter(e=>e.date>=t&&e.date<=addDays(t,13)&&(e.kind==='rdv'||!e.p.done)),kind:'ev',empty:'Rien de planifié. Ajoute une diffusion à un contenu pour la voir ici.'};
+if(sel&&sel.startsWith('day:')){const d=sel.slice(4);return{title:fmtDay(d),items:events({filtered:false,prod:true,rdv:true,extra:true,allExtra:true}).filter(e=>e.date===d),kind:'ev',empty:'Rien de prévu ce jour-là.',day:d};}
+return{title:'À venir · 14 jours',items:allR.filter(e=>e.date>=t&&e.date<=addDays(t,13)&&(e.kind!=='pub'||!e.p.done)),kind:'ev',empty:'Rien de planifié. Ajoute une diffusion à un contenu pour la voir ici.'};
 }
 function viewHome(){
 const t=today(),ws=weekStart(t),we=addDays(ws,6);
 const all=events({filtered:false,prod:false,rdv:false});
-const allProd=events({filtered:false,prod:true,rdv:true});
+const allProd=events({filtered:false,prod:true,rdv:true,extra:true,allExtra:true});
 const cs=contents();const accs=accounts();
 const n={upcoming:homeList('upcoming').items.length,week:homeList('week').items.length,late:all.filter(isLate).length,
 prod:cs.filter(c=>['ecriture','production','tournage','montage','pret'].includes(c.status)).length,ideas:ideasToHandle().length};
@@ -521,7 +523,7 @@ return'<div class="acc-row"><button class="acc-name row-main" style="flex-direct
 '<div class="kv"><b>'+up+'</b>à venir</div><div class="kv"><b>'+doneM+'</b>publiés ce mois</div></div>';}).join('')+'</div>'
 :'<div class="empty"><b>Aucun compte</b>Ajoute-les dans « Mes réseaux » ci-dessus.</div>';
 h+='</section></div>';return h;};
-B.inbox=()=>blkInbox();B.mytasks=()=>blkMyTasks();B.myreq=()=>blkMyReq();B.rdvmonth=()=>blkRdvMonth();B.projmonth=()=>blkProjMonth();B.figures=()=>blkFigures();B.week=()=>blkWeek();B.assistplan=()=>blkAssistPlan();
+B.inbox=()=>blkInbox();B.mytasks=()=>blkMyTasks();B.myreq=()=>blkMyReq();B.rdvmonth=()=>blkRdvMonth();B.projmonth=()=>blkProjMonth();B.figures=()=>blkFigures();B.week=()=>blkWeek();B.assistplan=()=>blkAssistPlan();B.projets=()=>blkProjets();B.away=()=>blkAway();
 const LY=homeLayout();LY.order.forEach(id=>{if(LY.hidden.includes(id)||!blockAvail(id)||!B[id])return;h+=B[id]();});
 return h+'</div>';
 }
@@ -563,8 +565,8 @@ else title=MONTHS[cd.getMonth()]+' '+cd.getFullYear();
 let h='<div class="wrap"><div class="head"><div><span class="label">Calendrier</span><h1>Planning de diffusion</h1></div><button class="btn primary" data-act="new" data-date="'+esc(u.selDay)+'">'+ICON.plus+'Planifier</button></div>';
 h+='<div class="cal-bar"><div class="cal-nav"><button class="icon-btn" data-act="cal-prev" aria-label="Précédent">'+ICON.left+'</button><button class="icon-btn" data-act="cal-next" aria-label="Suivant">'+ICON.right+'</button><span class="cal-title">'+esc(title)+'</span><button class="btn small" data-act="cal-today">Aujourd\'hui</button></div>'+
 '<div class="seg" role="group" aria-label="Vue">'+[['month','Mois'],['week','Semaine'],['list','Liste']].map(m=>'<button data-act="cal-mode" data-mode="'+m[0]+'" aria-pressed="'+(u.calMode===m[0])+'">'+m[1]+'</button>').join('')+'</div></div>';
-h+=filterBar('<label class="toggle"><input type="checkbox" id="show-prod" data-act-change="toggle-prod"'+(u.showProd?' checked':'')+'>Tournage &amp; montage</label><label class="toggle"><input type="checkbox" id="show-rdv" data-act-change="toggle-rdv"'+(u.showRdv?' checked':'')+'>Rendez-vous</label>'+(u.showRdv&&can('rdv')?'<select class="inp sm-sel" id="f-rprio" aria-label="Priorité des rendez-vous"><option value="">Toutes priorités</option>'+PRIOS.slice(0,3).map(p=>'<option value="'+p.id+'"'+(u.rdvPrio===p.id?' selected':'')+'>'+(p.id==='p4'?'Impératifs':p.rdv+' et plus')+'</option>').join('')+'</select>':'')+'<button class="btn small" data-act="ics" title="Fichier .ics pour Google Agenda ou l\'agenda de l\'iPhone">Exporter vers mon agenda</button>');
-const evs=events();const bd=byDate(evs);
+h+=filterBar('<label class="toggle"><input type="checkbox" id="show-prod" data-act-change="toggle-prod"'+(u.showProd?' checked':'')+'>Tournage &amp; montage</label><label class="toggle"><input type="checkbox" id="show-rdv" data-act-change="toggle-rdv"'+(u.showRdv?' checked':'')+'>Rendez-vous</label>'+v61CalToggles()+(u.showRdv&&can('rdv')?'<select class="inp sm-sel" id="f-rprio" aria-label="Priorité des rendez-vous"><option value="">Toutes priorités</option>'+PRIOS.slice(0,3).map(p=>'<option value="'+p.id+'"'+(u.rdvPrio===p.id?' selected':'')+'>'+(p.id==='p4'?'Impératifs':p.rdv+' et plus')+'</option>').join('')+'</select>':'')+'<button class="btn small" data-act="ics" title="Fichier .ics pour Google Agenda ou l\'agenda de l\'iPhone">Exporter vers mon agenda</button>');
+const evs=events({extra:true});const bd=byDate(evs);
 if(u.calMode==='month'){
 const first=new Date(cd.getFullYear(),cd.getMonth(),1);const start=weekStart(ds(first));
 const last=ds(new Date(cd.getFullYear(),cd.getMonth()+1,0));const end=addDays(weekStart(last),6);
@@ -576,7 +578,7 @@ list.slice(0,4).map(evChip).join('')+(list.length>4?'<span class="more">+'+(list
 }
 h+='</div>';
 const sel=bd[u.selDay]||[];
-h+='<section class="panel daypanel"><div class="panel-h"><h2 style="text-transform:capitalize">'+esc(fmtDay(u.selDay))+(holidayOf(u.selDay)?' <span class="pill" style="--c:#2B9348;text-transform:none">'+esc(holidayOf(u.selDay))+'</span>':'')+'</h2><div class="row-acts"><button class="btn small" data-act="rdv-new" data-date="'+esc(u.selDay)+'">'+ICON.plus+'RDV</button><button class="btn small" data-act="new" data-date="'+esc(u.selDay)+'">'+ICON.plus+'Contenu</button></div></div>'+
+h+='<section class="panel daypanel"><div class="panel-h"><h2 style="text-transform:capitalize">'+esc(fmtDay(u.selDay))+(holidayOf(u.selDay)?' <span class="pill" style="--c:#2B9348;text-transform:none">'+esc(holidayOf(u.selDay))+'</span>':'')+'</h2><div class="row-acts">'+v61DayBtns(u.selDay)+'<button class="btn small" data-act="rdv-new" data-date="'+esc(u.selDay)+'">'+ICON.plus+'RDV</button><button class="btn small" data-act="new" data-date="'+esc(u.selDay)+'">'+ICON.plus+'Contenu</button></div></div>'+
 (sel.length?'<div class="rows">'+sel.map(e=>evRow(e)).join('')+'</div>':'<div class="empty"><b>Journée libre</b>Rien de prévu ce jour-là.</div>')+
 '<p class="hint" style="margin:10px 0 0">Sur ordinateur, glisse un élément vers un autre jour pour changer sa date.</p></section>';
 }else if(u.calMode==='week'){
@@ -744,7 +746,7 @@ toast('« '+titleOf(c0)+' » est en écriture');
 }
 const ACT_LABEL={create:'Création',update:'Modification',delete:'Suppression',restore:'Restauration'};
 const ACT_ICON={create:'+',update:'✎',delete:'×',restore:'↺'};
-const KIND_LABEL={content:'Contenu',account:'Compte',settings:'Réglages',rdv:'Rendez-vous',doc:'Devis / facture',media:'Projection',deal:'Partenariat',contact:'Contact',task:'Tâche',request:'Demande'};
+const KIND_LABEL={content:'Contenu',account:'Compte',settings:'Réglages',rdv:'Rendez-vous',doc:'Devis / facture',media:'Validation',deal:'Partenariat',contact:'Contact',task:'Tâche',request:'Demande'};
 function histRow(e){
 const canRestore=!!e.before&&isAdmin();
 return'<div class="hist-row"><span class="hist-ic '+esc(e.action)+'" aria-hidden="true">'+(ACT_ICON[e.action]||'•')+'</span><div style="min-width:0"><b>'+esc(e.label||KIND_LABEL[e.kind]||'')+'</b><div class="row-meta"><span>'+(ACT_LABEL[e.action]||e.action)+' · '+esc(KIND_LABEL[e.kind]||'')+'</span><span class="mono">'+fmtStamp(e.at)+'</span>'+(e.by?'<span>par '+esc(e.by)+'</span>':'')+(e.summary?'<span>'+esc(e.summary)+'</span>':'')+'</div></div>'+
@@ -768,7 +770,7 @@ h+='<section class="panel"><div class="panel-h"><h2>Vues &amp; accès</h2></div>
 '<label class="field"><span>Prénom de l\'assistante</span><input class="inp" id="asst-name" value="'+esc(st.assistantName)+'" placeholder="Assistante" data-asst-name="1"></label>'+
 (S.mode==='supa'?'</div>':'<form class="field" data-form="pin" style="grid-column:span 2"><span>Changer le code PIN admin</span><div class="link-line"><input class="inp pin" id="pin-new" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••" aria-label="Nouveau code PIN"><button class="btn" type="submit">Enregistrer</button></div></form></div>')+
 '<p class="hint" style="margin:10px 0 0">La vue assistante ne peut pas supprimer de projet, valider des idées, toucher aux plateformes, aux formats, aux boîtes ni à ces réglages. Le code PIN protège l\'interface, pas les données : partage ton jeton GitHub seulement avec une personne de confiance.</p></section>';
-h+=permsPanel();
+h+=permsPanel()+offSettingsPanel();
 h+=templatesPanel();
 h+=goalsSettings();
 h+='<section class="panel"><div class="panel-h"><h2>Rappels</h2></div>'+notifBox()+'</section>';
@@ -842,7 +844,7 @@ return'<div class="sync-box"><p class="muted" style="margin:0">Colle le jeton Gi
 }
 function viewMore(){
 let h='<div class="wrap"><div class="head"><div><span class="label">Plus</span><h1>Menu</h1></div><span class="pill plain">Version '+APP_VERSION+'</span></div>';
-h+='<div class="more-list"><button class="btn" data-nav="search">Rechercher</button><button class="btn" data-nav="ideas">Idées'+(ideasToHandle().length?' · '+ideasToHandle().length:'')+'</button><button class="btn" data-nav="networks">Réseaux &amp; distribution</button>'+(ROLE==='assistant'||(isAdmin()&&settings().showAssistPlan)?'<button class="btn" data-nav="plans">'+(isAdmin()?'Plan de '+esc(roleName('assistant')):'Plans de travail')+'</button>':'')+'<button class="btn" data-act="inbox-open">'+(isAdmin()?'À traiter':'Nouveautés')+(bellCount()?' · '+bellCount():'')+'</button>'+(isAdmin()?'<button class="btn" data-nav="settings">Réglages, historique et versions</button>':'')+
+h+='<div class="more-list"><button class="btn" data-nav="search">Rechercher</button><button class="btn" data-nav="projets">Projets</button><button class="btn" data-nav="ideas">Idées'+(ideasToHandle().length?' · '+ideasToHandle().length:'')+'</button><button class="btn" data-nav="networks">Réseaux &amp; distribution</button>'+(ROLE==='assistant'||(isAdmin()&&settings().showAssistPlan)?'<button class="btn" data-nav="plans">'+(isAdmin()?'Plan de '+esc(roleName('assistant')):'Plans de travail')+'</button>':'')+'<button class="btn" data-act="inbox-open">'+(isAdmin()?'À traiter':'Nouveautés')+(bellCount()?' · '+bellCount():'')+'</button>'+(isAdmin()?'<button class="btn" data-nav="settings">Réglages, historique et versions</button>':'')+
 '<button class="btn" data-act="switch-role">'+(S.mode==='supa'?'Se déconnecter · '+esc(roleName(ROLE)):'Changer de vue · actuellement '+esc(roleName(ROLE)))+'</button></div>';
 h+='<section class="panel"><div class="panel-h"><h2>Synchronisation</h2></div>'+syncBox()+'</section>';
 h+='<section class="panel"><div class="panel-h"><h2>Rappels</h2></div>'+notifBox()+'</section>';
@@ -1213,10 +1215,11 @@ updateSettings(s=>{const p=(s.profiles||[]).find(x=>x.id===pid);if(p){p.logo=url
 img.onerror=()=>toast('Image illisible.');img.src=fr.result;};fr.readAsDataURL(file);
 }
 const PERMS=[
-['Projets',[['projEdit','Créer et modifier les projets',true],['projStatus','Changer le statut des projets',true],['projDelete','Supprimer des projets',false],['projection','Utiliser Projection (rushs, versions, retours)',true],['budget','Voir et saisir le budget et les dépenses des projets',true],['calMove','Changer les dates (calendrier, glisser-déposer)',true]]],
+['Contenus',[['projEdit','Créer et modifier les contenus',true],['projStatus','Changer le statut des contenus',true],['projDelete','Supprimer des contenus',false],['projection','Utiliser Validation (rushs, versions, retours)',true],['budget','Voir et saisir le budget et les dépenses des contenus',true],['calMove','Changer les dates (calendrier, glisser-déposer)',true]]],
+['Projets',[['projets','Créer et modifier les projets (albums, clips…) et cocher leurs objectifs',true]]],
 ['Idées',[['ideaDeleteOwn','Supprimer ses propres idées',true]]],
 ['Réseaux',[['accounts','Gérer les comptes des réseaux',true],['stats','Saisir et voir les statistiques des publications',true]]],
-['Business',[['rdv','Voir et gérer les rendez-vous',true],['clients','Gérer les clients',true],['devis','Créer, modifier et exporter les devis',true],['factures','Créer, modifier et exporter les factures',true],
+['Business',[['rdv','Voir et gérer les rendez-vous',true],['trips','Voir et gérer les déplacements',true],['clients','Gérer les clients',true],['devis','Créer, modifier et exporter les devis',true],['factures','Créer, modifier et exporter les factures',true],
 ['toCollect','Voir l\'argent à réclamer',true],['suivis','Suivre les paiements : acomptes, reste à payer, relances',true],['payStatus','Changer le statut des paiements (avec ta validation)',true],['entreprises','Voir le résumé de tes entreprises',true],['prestaEdit','Modifier le catalogue de prestations',false],['collabs','Gérer les partenariats',true],['contacts','Gérer les contacts',true]]],
 ['Plans & demandes',[['requests','Envoyer des demandes à l\'admin (signature, rushs, questions…)',true]]],
 ['Autre',[['history','Voir l\'historique des modifications',false]]]
@@ -1260,16 +1263,17 @@ toast((ok?'Validé : ':'Refusé : ')+x.number+' → '+statusLabel(x.kind,to));
 }
 function pendingPill(d){if(d.pendingStatus)return'<span class="pill" style="--c:#C98C00">→ '+esc(statusLabel(d.kind,d.pendingStatus.to))+' · à valider</span>';
 if(!isAdmin()&&d.lastDecision&&!d.lastDecision.ok&&Date.now()-d.lastDecision.at<14*864e5)return'<span class="pill" style="--c:#D2402C">« '+esc(statusLabel(d.kind,d.lastDecision.to))+' » refusé</span>';return'';}
-function bizTabs(){return[['rdv','Rendez-vous',can('rdv')],['comp','Clients',true],['collab','Partenariats',can('collabs')],['contacts','Contacts',can('contacts')],['fac','Factures',can('factures')],['dev','Devis',can('devis')],['suivi','Suivis',can('suivis')],['presta','Prestations',true],['prof',isAdmin()?'Mes entreprises':'Les entreprises',can('entreprises')]].filter(t=>t[2]);}
+function bizTabs(){return[['rdv','Rendez-vous',can('rdv')],['trips','Déplacements',can('trips')],['comp','Clients',true],['collab','Partenariats',can('collabs')],['contacts','Contacts',can('contacts')],['fac','Factures',can('factures')],['dev','Devis',can('devis')],['suivi','Suivis',can('suivis')],['presta','Prestations',true],['prof',isAdmin()?'Mes entreprises':'Les entreprises',can('entreprises')]].filter(t=>t[2]);}
 function viewBusiness(){
 const u=S.ui;const tabs=bizTabs();if(!tabs.some(t=>t[0]===u.bizTab))u.bizTab=tabs[0][0];
-let h='<div class="wrap"><div class="head"><div><span class="label">Business</span><h1>Business</h1><p class="muted">Rendez-vous, clients, devis et factures. Les rendez-vous apparaissent aussi dans le calendrier.</p></div>'+
-(u.bizTab==='rdv'?'<button class="btn primary" data-act="rdv-new">'+ICON.plus+'Nouveau rendez-vous</button>':'')+'</div>';
+let h='<div class="wrap"><div class="head"><div><span class="label">Business</span><h1>Business</h1><p class="muted">Rendez-vous, déplacements, clients, devis et factures. Les rendez-vous et les déplacements apparaissent aussi dans le calendrier.</p></div>'+
+(u.bizTab==='rdv'?'<button class="btn primary" data-act="rdv-new">'+ICON.plus+'Nouveau rendez-vous</button>':'')+(u.bizTab==='trips'&&can('trips')?'<button class="btn primary" data-act="trip-new">'+ICON.plus+'Nouveau déplacement</button>':'')+'</div>';
 h+='<div class="seg" role="group" aria-label="Section">'+tabs.map(m=>'<button data-act="biz-tab" data-tab="'+m[0]+'" aria-pressed="'+(u.bizTab===m[0])+'">'+m[1]+(m[0]==='fac'&&isAdmin()&&pendingDocs('facture').length?' · '+pendingDocs('facture').length:'')+(m[0]==='dev'&&isAdmin()&&pendingDocs('devis').length?' · '+pendingDocs('devis').length:'')+'</button>').join('')+'</div>';
 if(BILL_TABS.includes(u.bizTab))h+=billingTab(u.bizTab);
 else if(u.bizTab==='collab')h+=viewCollabs();
 else if(u.bizTab==='contacts')h+=viewContacts();
 else if(u.bizTab==='comp')h+=viewClients();
+else if(u.bizTab==='trips')h+=viewTripsList();
 else h+=viewRdvList();
 return h+'</div>';
 }
@@ -1288,7 +1292,7 @@ return h;
 const CLIENT_FIELDS=[['contact','Contact'],['phone','Téléphone'],['email','E-mail'],['nif','NIF'],['stat','STAT'],['rcs','RCS'],['address','Adresse'],['country','Pays']];
 function viewClients(){
 const ed=can('clients');const t=today();const all=Object.values(S.rdv);
-let h='<p class="muted" style="margin:0">Tes clients servent partout : rendez-vous pro, projets, devis et factures. Leurs infos sont reprises automatiquement sur les documents.</p>';
+let h='<p class="muted" style="margin:0">Tes clients servent partout : rendez-vous pro, contenus, devis et factures. Leurs infos sont reprises automatiquement sur les documents.</p>';
 if(ed)h+='<section class="panel"><h3>Ajouter un client</h3><form class="add-form" data-form="comp"><input class="inp" id="comp-new" placeholder="Nom du client (ex. Orange Madagascar)" autocomplete="off"><input type="color" class="swatch" id="comp-new-color" value="#3D5A80" aria-label="Couleur"><button class="btn primary" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
 if(!companies().length)return h+'<div class="empty"><b>Aucun client pour l\'instant</b>'+(ed?'Ajoute ton premier client ci-dessus.':'Aucun client enregistré.')+'</div>';
 h+='<div class="comp-list">'+companies().map(c=>{const mine=all.filter(x=>x.kind!=='perso'&&x.companyId===c.id);const next=mine.filter(x=>x.date>=t).sort((a,b)=>a.date<b.date?-1:1)[0];
@@ -1297,7 +1301,7 @@ return'<section class="panel comp-card"><div class="set-item"><input type="color
 '<input class="inp" id="cl-'+esc(c.id)+'" value="'+esc(c.label)+'" data-comp-label="'+esc(c.id)+'" aria-label="Nom du client" style="font-weight:700"'+dis+'>'+
 foldBtn('cl:'+c.id)+(ed?'<button class="icon-btn danger" data-act="comp-del" data-id="'+esc(c.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer '+esc(c.label)+'">'+ICON.trash+'</button>':'')+'</div>'+
 '<div class="f-grid">'+CLIENT_FIELDS.map(f=>'<label class="field'+(f[0]==='address'?' wide':'')+'"><span>'+f[1]+'</span><input class="inp" id="cf-'+f[0]+'-'+esc(c.id)+'" value="'+esc(c[f[0]]||'')+'" data-compf="'+f[0]+'" data-id="'+esc(c.id)+'"'+dis+'></label>').join('')+'</div>'+
-'<div class="kvs"><div><span class="label">Prochain RDV</span><b>'+(next?esc(fmtShort(next.date))+(next.start?' · '+esc(next.start):''):'—')+'</b></div><div><span class="label">Projets</span><b>'+pj+'</b></div><div><span class="label">Devis et factures</span><b>'+nd+'</b></div></div>'+
+'<div class="kvs"><div><span class="label">Prochain RDV</span><b>'+(next?esc(fmtShort(next.date))+(next.start?' · '+esc(next.start):''):'—')+'</b></div><div><span class="label">Contenus</span><b>'+pj+'</b></div><div><span class="label">Devis et factures</span><b>'+nd+'</b></div></div>'+
 '<div class="card-f">'+(can('rdv')?'<button class="btn small" data-act="rdv-new" data-comp="'+esc(c.id)+'">'+ICON.plus+'RDV</button>':'')+(can('devis')?'<button class="btn small" data-act="doc-new" data-kind="devis" data-comp="'+esc(c.id)+'">'+ICON.plus+'Devis</button>':'')+
 (can('factures')?'<button class="btn small" data-act="doc-new" data-kind="facture" data-comp="'+esc(c.id)+'">'+ICON.plus+'Facture</button>':'')+(can('rdv')?'<button class="btn small ghost" data-act="comp-filter" data-id="'+esc(c.id)+'">Ses rendez-vous</button>':'')+'</div></section>';}).join('')+'</div>';
 if(isAdmin())h+='<section class="panel comp-card"><h3>Rendez-vous perso</h3><div class="set-item"><input type="color" class="swatch" id="perso-color" value="'+esc(settings().persoColor)+'" data-perso-color="1" aria-label="Couleur des rendez-vous perso"><span class="muted">Couleur des rendez-vous perso dans le calendrier</span></div></section>';
@@ -1612,15 +1616,15 @@ return'<button class="pj-card" data-act="pj-open" data-id="'+esc(m.id)+'"><div c
 '<div class="card-f"><span class="pill" style="--c:'+st[1]+'">'+st[0]+'</span>'+(cm.length?'<span class="pill plain">'+done+'/'+cm.length+' retours traités</span>':'')+'</div></div></button>';
 }
 function viewProjection(){
-if(!can('projection'))return'<div class="wrap"><div class="empty"><b>Accès coupé</b>L\'admin a désactivé Projection pour cette vue.</div></div>';
+if(!can('projection'))return'<div class="wrap"><div class="empty"><b>Accès coupé</b>L\'admin a désactivé Validation pour cette vue.</div></div>';
 const u=S.ui;const tab=u.pjTab||'attente';const f=u.pjProject||'';
 let all=medias();if(f)all=all.filter(m=>m.contentId===f);
 const lists={attente:all.filter(m=>m.kind==='version'&&m.status==='attente'),corriger:all.filter(m=>m.kind==='version'&&m.status==='corriger'),rush:all.filter(m=>m.kind==='rush'),valide:all.filter(m=>m.kind==='version'&&['valide','remplacee'].includes(m.status))};
 const L=(lists[tab]||[]).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-let h='<div class="wrap"><div class="head"><div><span class="label">Projection</span><h1>Projection</h1><p class="muted">Les rushs à récupérer, les versions à valider et tes retours, projet par projet.</p></div>'+
+let h='<div class="wrap"><div class="head"><div><span class="label">Validation</span><h1>Validation</h1><p class="muted">Les rushs à récupérer, les versions à valider et tes retours, projet par projet.</p></div>'+
 '<div class="card-f"><button class="btn" data-act="pj-new" data-kind="rush">'+ICON.plus+'Partager des rushs</button><button class="btn primary" data-act="pj-new" data-kind="version">'+ICON.plus+'Proposer une version</button></div></div>';
 h+='<div class="cal-bar"><div class="seg" role="group" aria-label="Section">'+[['attente','À valider'],['corriger','À corriger'],['rush','Rushs'],['valide','Validées']].map(t=>'<button data-act="pj-tab" data-tab="'+t[0]+'" aria-pressed="'+(tab===t[0])+'">'+t[1]+(lists[t[0]].length&&t[0]!=='valide'?' · '+lists[t[0]].length:'')+'</button>').join('')+'</div>'+
-'<select class="inp'+(f?' on':'')+'" id="pj-project" data-pjf="1" aria-label="Projet" style="width:auto;max-width:100%"><option value="">Tous les projets</option>'+contents().filter(c=>c.status!=='idee').map(c=>'<option value="'+esc(c.id)+'"'+(c.id===f?' selected':'')+'>'+esc(titleOf(c))+'</option>').join('')+'</select></div>';
+'<select class="inp'+(f?' on':'')+'" id="pj-project" data-pjf="1" aria-label="Projet" style="width:auto;max-width:100%"><option value="">Tous les contenus</option>'+contents().filter(c=>c.status!=='idee').map(c=>'<option value="'+esc(c.id)+'"'+(c.id===f?' selected':'')+'>'+esc(titleOf(c))+'</option>').join('')+'</select></div>';
 const empty={attente:'Aucune version en attente de retour.',corriger:'Rien à corriger pour l\'instant.',rush:'Aucun rush partagé. Colle un lien Google Drive, Dropbox ou WeTransfer.',valide:'Aucune version validée.'};
 h+=L.length?'<div class="pj-grid">'+L.map(mediaCard).join('')+'</div>':'<div class="empty"><b>Rien ici</b>'+esc(empty[tab])+'</div>';
 if(S.mode==='cloud')h+='<p class="hint" style="margin:0">Sur ce lien, les vidéos s\'ouvrent dans un nouvel onglet : la lecture intégrée et les retours minutés automatiques fonctionnent sur ton site GitHub. Ici, tu tapes le minutage toi-même.</p>';
@@ -1702,7 +1706,7 @@ pdf.rect(M,y-3.6,4.2,4.2,x.done?'#14A37F':null,'#9a98aa');if(x.done)pdf.text('v'
 pdf.text(x.t!=null?fmtTC(x.t):(x.x!=null?'Repère '+(cm.indexOf(x)+1):'#'+(i+1)),M+7,y,{font:'F2',size:10,color:x.done?grey:'#1d1c25'});
 lines.forEach((l,k)=>{pdf.text(l,M+30,y+k*4.8,{size:10,color:x.done?grey:'#1d1c25'});});
 y+=lines.length*4.8;pdf.text((x.done?'Traité · ':'À faire · ')+(x.by||'')+' · '+fmtStamp(x.at),M+30,y,{size:8,color:grey});y+=7;});
-const n=pdf.pages.length;pdf.pages.forEach((pg,i)=>{pdf.cur=pg;pdf.text('Studio Tefi · Projection',M,290,{size:7.5,color:grey});pdf.text('Page '+(i+1)+'/'+n,R,290,{size:7.5,color:grey,align:'right'});});
+const n=pdf.pages.length;pdf.pages.forEach((pg,i)=>{pdf.cur=pg;pdf.text('Studio Tefi · Validation',M,290,{size:7.5,color:grey});pdf.text('Page '+(i+1)+'/'+n,R,290,{size:7.5,color:grey,align:'right'});});
 await saveBlob(pdf.output(),'Corrections-'+String((c?titleOf(c):m.title)||'video').replace(/[^\w.-]+/g,'_').slice(0,40)+'-V'+(m.version||1)+'.pdf');
 }
 async function saveBlob(blob,filename){
@@ -1817,7 +1821,7 @@ return'<div class="disc">'+(c.comments.length?c.comments.slice(-30).map(x=>'<div
 function peekExtras(c){
 let h='';
 if(c.checklist.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Checklist</h3></div>'+checkBar(c.checklist)+'<div class="ck-list">'+c.checklist.map(x=>'<label class="ck'+(x.done?' done':'')+'"><input type="checkbox" class="ck-box" data-pkck="'+esc(x.id)+'"'+(x.done?' checked':'')+(can('projEdit')?'':' disabled')+'><span>'+esc(x.text)+'</span></label>').join('')+'</div></div>';
-const md=mediaForContent(c.id);if(md.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Projection</h3></div><div class="card-f">'+md.slice(0,6).map(m=>{const st=MSTATUS[m.status]||MSTATUS.attente;return'<button class="pill" style="--c:'+st[1]+';border:0;cursor:pointer" data-act="pj-open" data-id="'+esc(m.id)+'">'+(m.kind==='rush'?'Rushs':'V'+(m.version||1))+' · '+st[0]+'</button>';}).join('')+'</div></div>';
+const md=mediaForContent(c.id);if(md.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Validation</h3></div><div class="card-f">'+md.slice(0,6).map(m=>{const st=MSTATUS[m.status]||MSTATUS.attente;return'<button class="pill" style="--c:'+st[1]+';border:0;cursor:pointer" data-act="pj-open" data-id="'+esc(m.id)+'">'+(m.kind==='rush'?'Rushs':'V'+(m.version||1))+' · '+st[0]+'</button>';}).join('')+'</div></div>';
 if(c.finalLink)h+='<a class="link-chip" href="'+esc(normUrl(c.finalLink))+'" target="_blank" rel="noopener" style="align-self:flex-start">↗ Version finale validée</a>';
 const ld=linkedDocs(c.id).filter(d=>can(d.kind==='devis'?'devis':'factures'));if(ld.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Devis et factures</h3></div><div class="card-f">'+ld.map(d=>{const st=docState(d);return'<button class="pill" style="--c:'+st[2]+';border:0;cursor:pointer" data-act="doc-open" data-id="'+esc(d.id)+'">'+esc(d.number)+' · '+st[1]+(d.kind==='facture'&&paidPct(d)>0&&paidPct(d)<100?' · '+paidPct(d)+' %':'')+'</button>';}).join('')+'</div></div>';
 h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Discussion</h3><span class="mono muted">'+c.comments.length+'</span></div>'+discussionHtml(c,'pk')+'</div>';
@@ -1881,7 +1885,7 @@ else medias().filter(m=>(m.kind==='version'&&m.status==='corriger')||(m.kind==='
 }
 return it.sort((a,b)=>(a.time||'99')<(b.time||'99')?-1:1);
 }
-const TODAY_IC={pub:['Publication','#5B6CFF'],shoot:['Tournage','#E0533D'],edit:['Montage','#C98C00'],rdv:['RDV','#2B9348'],money:['Paiement','#D2402C'],pj:['Projection','#9B4DCA']};
+const TODAY_IC={pub:['Publication','#5B6CFF'],shoot:['Tournage','#E0533D'],edit:['Montage','#C98C00'],rdv:['RDV','#2B9348'],money:['Paiement','#D2402C'],pj:['Validation','#9B4DCA']};
 function alertsList(){
 const A=[];const t=today();
 const latePubs=events({filtered:false,prod:false,rdv:false}).filter(isLate).length;if(latePubs)A.push([latePubs+' publication'+(latePubs>1?'s':'')+' en retard','home-sel','late','#D2402C']);
@@ -1928,11 +1932,13 @@ const ev=(uidv,date,time,dur,title,desc,loc)=>{L.push('BEGIN:VEVENT','UID:'+uidv
 if(time){const st=date.replace(/-/g,'')+'T'+time.replace(':','')+'00';const end=new Date(pd(date).getTime());const[hh,mm]=time.split(':').map(Number);end.setHours(hh,mm+dur);L.push('DTSTART:'+st,'DTEND:'+ds(end).replace(/-/g,'')+'T'+pad(end.getHours())+pad(end.getMinutes())+'00');}
 else L.push('DTSTART;VALUE=DATE:'+date.replace(/-/g,''),'DTEND;VALUE=DATE:'+addDays(date,1).replace(/-/g,''));
 L.push('SUMMARY:'+icsEsc(title));if(desc)L.push('DESCRIPTION:'+icsEsc(desc));if(loc)L.push('LOCATION:'+icsEsc(loc));L.push('END:VEVENT');};
-events({filtered:false,prod:true,rdv:true}).forEach(e=>{if(e.date<from||e.date>to)return;
+events({filtered:false,prod:true,rdv:true,extra:true,allExtra:true}).forEach(e=>{if(e.date<from||e.date>to)return;
 if(e.kind==='pub')ev('p-'+e.p.id,e.date,e.time,15,'Publier : '+titleOf(e.c)+(e.a?' ('+e.a.handle+')':''),typeOf(e.c.type).label,'');
 else if(e.kind==='shoot')ev('s-'+e.s.id+'-'+e.date,e.date,'',0,'Tournage : '+titleOf(e.c)+(e.dn>1?' (jour '+(e.di+1)+'/'+e.dn+')':''),e.c.cast||'',e.s.location||'');
 else if(e.kind==='edit')ev('e-'+e.c.id,e.date,'',0,'Montage : '+titleOf(e.c),'','');
-else if(e.kind==='rdv'){const x=e.r;let dur=60;if(x.start&&x.end){const[a1,b1]=x.start.split(':').map(Number),[a2,b2]=x.end.split(':').map(Number);dur=Math.max(15,(a2*60+b2)-(a1*60+b1));}ev('r-'+x.id,x.date,x.start||'',dur,(x.kind==='perso'?'RDV perso : ':'RDV '+rdvWho(x)+' : ')+(x.title||''),[x.contact,x.notes,x.link].filter(Boolean).join('\n'),x.location||'');}});
+else if(e.kind==='rdv'){const x=e.r;let dur=60;if(x.start&&x.end){const[a1,b1]=x.start.split(':').map(Number),[a2,b2]=x.end.split(':').map(Number);dur=Math.max(15,(a2*60+b2)-(a1*60+b1));}ev('r-'+x.id,x.date,x.start||'',dur,(x.kind==='perso'?'RDV perso : ':'RDV '+rdvWho(x)+' : ')+(x.title||''),[x.contact,x.notes,x.link].filter(Boolean).join('\n'),x.location||'');}
+else if(e.kind==='trip')ev('v-'+e.x.id+'-'+e.date,e.date,'',0,'Déplacement : '+tripTitle(e.x)+(e.dn>1?' ('+(e.di+1)+'/'+e.dn+')':''),tripCat(e.x),e.x.destination||'');
+else if(e.kind==='off')ev('o-'+e.o.id+'-'+e.date,e.date,'',0,offWho(e.o)+' indisponible'+(e.o.status==='pending'?' (en attente)':''),'','');});
 L.push('END:VCALENDAR');
 saveBlob(new Blob([L.join('\r\n')],{type:'text/calendar'}),'studio-tefi-planning.ics');
 }
@@ -2171,15 +2177,17 @@ const q=(S.ui.globalQ||'').trim();const ql=q.toLowerCase();const m=x=>String(x||
 let h='<div class="wrap"><div class="head"><div><span class="label">Recherche</span><h1>Rechercher</h1></div></div><div class="search" style="max-width:none">'+ICON.search+'<input class="inp" id="global-q" type="search" placeholder="Projet, idée, client, facture, contact…" value="'+esc(q)+'" data-input="globalq" autofocus></div>';
 if(q.length<2)return h+'<p class="hint">Tape au moins 2 lettres.</p></div>';
 const G=[];
-const cs=contents().filter(c=>m(c.title)||m(c.notes)||m(c.caption)||m(c.hashtags)||(c.scenes||[]).some(s=>m(s.body)||m(s.heading))||(c.shoots||[]).some(s=>m(s.location)));
-if(cs.length)G.push(['Projets et idées',cs.slice(0,12).map(c=>['peek',c.id,titleOf(c),statusOf(c.status).label+' · '+typeOf(c.type).label])]);
+const cs=contents().filter(c=>m(c.title)||m(c.notes)||m(c.caption)||m(c.hashtags)||(c.scenes||[]).some(s=>m(s.body)||m(s.heading))||m(c.scriptText)||(c.shoots||[]).some(s=>m(s.location)));
+if(cs.length)G.push(['Contenus et idées',cs.slice(0,12).map(c=>['peek',c.id,titleOf(c),statusOf(c.status).label+' · '+typeOf(c.type).label])]);
 const cl=companies().filter(c=>m(c.label)||m(c.contact)||m(c.nif)||m(c.email));if(cl.length)G.push(['Clients',cl.map(c=>['go-client',c.id,c.label,[c.contact,c.phone].filter(Boolean).join(' · ')])]);
 if(can('contacts')){const ct=contactsL().filter(c=>m(c.name)||m(c.role)||m(c.phone)||m(c.email));if(ct.length)G.push(['Contacts',ct.map(c=>['form-open:contact',c.id,c.name,[c.role,c.phone].filter(Boolean).join(' · ')])]);}
 const dd=docs().filter(d=>can(d.kind==='devis'?'devis':'factures')&&(m(d.number)||m(d.subject)||m(d.clientSnap&&d.clientSnap.name)||m((compOf(d.companyId)||{}).label)||(d.lines||[]).some(l=>m(l.label))));
 if(dd.length)G.push(['Devis et factures',dd.slice(0,12).map(d=>['doc-open',d.id,(d.kind==='devis'?'Devis ':'Facture ')+d.number,((d.clientSnap&&d.clientSnap.name)||'')+' · '+money(docTotals(d).total,d.currency)])]);
 if(can('collabs')){const dl=deals().filter(d=>m(d.title)||m(d.notes)||m(d.deliverables));if(dl.length)G.push(['Partenariats',dl.map(d=>['form-open:deal',d.id,d.title,stageOf(d.stage)[1]])]);}
 if(can('rdv')){const rv=Object.values(S.rdv).filter(x=>m(x.title)||m(x.contact)||m(x.location)||m(x.notes));if(rv.length)G.push(['Rendez-vous',rv.slice(0,10).map(x=>['rdv-open',x.id,x.title||'Rendez-vous',fmtShort(x.date)+(x.start?' · '+x.start:'')])]);}
-if(can('projection')){const md=medias().filter(x=>m(x.title)||m(x.notes)||(x.comments||[]).some(c=>m(c.text)));if(md.length)G.push(['Projection',md.slice(0,10).map(x=>['pj-open',x.id,x.title||'Média',(x.kind==='rush'?'Rushs':'V'+(x.version||1))+' · '+(MSTATUS[x.status]||MSTATUS.attente)[0]])]);}
+if(can('projection')){const md=medias().filter(x=>m(x.title)||m(x.notes)||(x.comments||[]).some(c=>m(c.text)));if(md.length)G.push(['Validation',md.slice(0,10).map(x=>['pj-open',x.id,x.title||'Média',(x.kind==='rush'?'Rushs':'V'+(x.version||1))+' · '+(MSTATUS[x.status]||MSTATUS.attente)[0]])]);}
+{const pj=projectsAll().filter(p=>m(p.title)||m(p.pitch)||m(p.notes)||(p.goals||[]).some(g=>m(g.text)));if(pj.length)G.push(['Projets',pj.slice(0,10).map(p=>['prj-open',p.id,prjTitle(p),prjType(p)+' · '+prjSt(p).label])]);}
+if(can('trips')){const tv=tripsAll().filter(x=>m(x.title)||m(x.destination)||m(x.notes));if(tv.length)G.push(['Déplacements',tv.slice(0,10).map(x=>['trip-open',x.id,tripTitle(x),fmtRange(x.start,tripEnd(x))])]);}
 const acs=accounts().filter(a=>m(a.handle));if(acs.length)G.push(['Comptes',acs.map(a=>['filter-account',a.id,a.handle,platOf(a.platform).label])]);
 if(!G.length)return h+'<div class="empty"><b>Aucun résultat</b>pour « '+esc(q)+' ».</div></div>';
 h+=G.map(g=>'<section class="panel"><div class="panel-h"><h2>'+g[0]+'</h2><span class="mono muted">'+g[1].length+'</span></div><div class="rows">'+g[1].map(r=>{const[act,kind]=r[0].split(':');return'<div class="row"><button class="row-main" data-act="'+act+'"'+(kind?' data-kind="'+kind+'"':'')+' data-id="'+esc(r[1])+'"><b>'+esc(r[2])+'</b><span class="row-meta"><span>'+esc(r[3]||'')+'</span></span></button></div>';}).join('')+'</div></section>').join('');
@@ -2505,7 +2513,7 @@ function landingHtml(){
 const ic=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
 const feats=[
 [ic('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),'Planning & calendrier','Toutes les publications, les tournages et les rendez-vous au même endroit, au jour, à la semaine ou au mois.'],
-[ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>'),'Projets & tournages','Chaque contenu suit son chemin : écriture, production, tournage, montage, validation des versions, publication.'],
+[ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>'),'Contenus & tournages','Chaque contenu suit son chemin : écriture, production, tournage, montage, validation des versions, publication.'],
 [ic('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),'Idées & validation','L\'assistante propose des idées avec ses références, Tefi les valide, les refuse ou les renvoie à retravailler.'],
 [ic('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>'),'Business','Rendez-vous, clients, devis, factures et suivi des paiements, avec des documents prêts à envoyer en PDF.']];
 return'<div class="land"><header class="land-top"><div class="brand"><div class="brand-mark">T</div><b>Studio Tefi</b></div><button class="btn" data-act="sb-step" data-step="login">Se connecter</button></header>'+
@@ -2554,7 +2562,7 @@ today:{label:'Aujourd\'hui et alertes',roles:['admin','assistant']},
 mytasks:{label:'Mes tâches',roles:['assistant']},
 myreq:{label:'Mes demandes à Tefi',roles:['assistant']},
 rdvmonth:{label:'Rendez-vous du mois',roles:['admin','assistant'],need:'rdv'},
-projmonth:{label:'Projets du mois',roles:['admin','assistant']},
+projmonth:{label:'Contenus du mois',roles:['admin','assistant']},
 figures:{label:'Le mois en chiffres',roles:['admin','assistant']},
 week:{label:'Point de la semaine',roles:['admin']},
 assistplan:{label:'Plan de travail de l\'assistante',roles:['admin'],when:()=>!!settings().showAssistPlan},
@@ -2602,8 +2610,8 @@ it.sort((x,y)=>x[0]<y[0]?-1:1);return it[0]||null;}
 function blkProjMonth(){
 const L=projMonthList();const order=STATUSES.map(s=>s.id);const steps=['ecriture','production','tournage','montage','pret','publie'];
 L.sort((x,y)=>order.indexOf(x.status)-order.indexOf(y.status));
-let h='<section class="panel"><div class="panel-h"><h2>Projets du mois</h2><span class="mono muted">'+L.length+'</span></div>';
-if(!L.length)return h+'<div class="empty"><b>Aucun projet ce mois-ci</b>Planifie un tournage, un montage ou une publication pour le voir ici.</div></section>';
+let h='<section class="panel"><div class="panel-h"><h2>Contenus du mois</h2><span class="mono muted">'+L.length+'</span></div>';
+if(!L.length)return h+'<div class="empty"><b>Aucun contenu ce mois-ci</b>Planifie un tournage, un montage ou une publication pour le voir ici.</div></section>';
 h+='<div class="rows">'+L.map(c=>{const s=statusOf(c.status);const i=Math.max(0,steps.indexOf(c.status));const pct=Math.round((i+1)/steps.length*100);const nx=nextStepOf(c);
 return'<div class="row"><button class="row-main" data-act="peek" data-id="'+esc(c.id)+'"><b>'+esc(titleOf(c))+'</b><span class="row-meta"><span class="pill" style="--c:'+s.c+'">'+s.label+'</span>'+(nx?'<span>'+esc(nx[1])+' · '+esc(fmtShort(nx[0]))+'</span>':'<span class="muted">Rien de prévu après</span>')+'</span>'+
 '<span class="prog" aria-label="Avancement '+pct+' %"><i style="width:'+pct+'%;--c:'+s.c+'"></i></span></button></div>';}).join('')+'</div></section>';
@@ -2713,7 +2721,7 @@ function closeTask(){taskDraft=null;$('#taskm').hidden=true;if(!draft&&!peekId&&
 function canEditTask(x){if(isAdmin())return x.owner==='admin'||x.assignedBy==='admin'||!S.tasks[x.id];return x.owner!=='admin'||x.assignedBy==='admin';}
 function linkSelect(l){const k=(l&&l.kind)||'';const id=(l&&l.id)||'';
 const opts={content:contents().filter(c=>c.status!=='idee').map(c=>[c.id,titleOf(c)]),doc:(can('devis')||can('factures')||isAdmin())?docs().map(d=>[d.id,(d.kind==='devis'?'Devis ':'Facture ')+d.number]):[],rdv:can('rdv')?Object.values(S.rdv).map(r=>[r.id,(r.title||'RDV')+' · '+fmtShort(r.date)]):[],media:can('projection')?medias().map(m=>[m.id,(m.title||'Média')+(m.version?' V'+m.version:'')]):[]};
-return'<div class="link-line"><select class="inp" id="tk-lk" data-tk-lk="kind" aria-label="Type de lien"><option value="">Aucun lien</option>'+[['content','Projet'],['doc','Devis ou facture'],['rdv','Rendez-vous'],['media','Projection']].filter(o=>opts[o[0]].length).map(o=>'<option value="'+o[0]+'"'+(k===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'+
+return'<div class="link-line"><select class="inp" id="tk-lk" data-tk-lk="kind" aria-label="Type de lien"><option value="">Aucun lien</option>'+[['content','Contenu'],['doc','Devis ou facture'],['rdv','Rendez-vous'],['media','Projection']].filter(o=>opts[o[0]].length).map(o=>'<option value="'+o[0]+'"'+(k===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'+
 (k?'<select class="inp" id="tk-li" data-tk-lk="id" aria-label="Élément lié"><option value="">Choisir…</option>'+(opts[k]||[]).map(o=>'<option value="'+esc(o[0])+'"'+(o[0]===id?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>':'')+'</div>';}
 function renderTask(){
 const x=taskDraft;if(!x)return;const isNew=!S.tasks[x.id];const ed=canEditTask(x);const dis=ed?'':' disabled';const mine=x.owner===ROLE;
@@ -2876,7 +2884,7 @@ function bellCount(){return isAdmin()?inboxItems().length:asstNews().length;}
 function renderInbox(){
 let h='<div class="peek-h"><div style="flex:1"><span class="label">'+(isAdmin()?'À traiter':'Nouveautés')+'</span><h2 style="margin:4px 0 0">'+(isAdmin()?esc(roleName('assistant'))+' et toi':'Ce que Tefi t\'a envoyé')+'</h2></div><button class="icon-btn" data-act="inbox-close" aria-label="Fermer">'+ICON.x+'</button></div><div class="peek-b">';
 if(isAdmin()){const L=inboxItems();h+=L.length?'<div class="rows">'+L.map(inboxRow).join('')+'</div>':'<div class="empty"><b>Tout est à jour</b>Rien n\'attend ta décision.</div>';}
-else{const N=asstNews();h+=N.length?'<div class="rows">'+N.map(x=>'<div class="row"><button class="row-main" data-act="'+(x.kind==='reqnews'?'req-open':'task-open')+'" data-id="'+esc(x.id)+'"><b>'+esc(x.label)+'</b><span class="row-meta"><span>'+esc(x.sub)+'</span></span></button></div>').join('')+'</div>':'<div class="empty"><b>Rien de nouveau</b>Les réponses de Tefi apparaîtront ici.</div>';
+else{const N=asstNews();h+=N.length?'<div class="rows">'+N.map(x=>'<div class="row"><button class="row-main" data-act="'+(x.kind==='reqnews'?'req-open':x.kind==='offnews'?'off-open':'task-open')+'" data-id="'+esc(x.id)+'"><b>'+esc(x.label)+'</b><span class="row-meta"><span>'+esc(x.sub)+'</span></span></button></div>').join('')+'</div>':'<div class="empty"><b>Rien de nouveau</b>Les réponses de Tefi apparaîtront ici.</div>';
 h+=myRequestsPanel(false);}
 morph($('#inbox-panel'),h+'</div>');
 }
@@ -3149,7 +3157,7 @@ else if(e.kind==='settings'){const cur=clone(settings());Store.saveSettings(e.be
 toast('Version restaurée');
 }
 async function exportData(){
-const data=JSON.stringify({app:'studio-tefi',version:1,exportedAt:new Date().toISOString(),settings:S.settings||DEFAULT_SETTINGS,accounts:Object.values(S.accounts),rdv:Object.values(S.rdv),docs:Object.values(S.docs),media:Object.values(S.media),deals:Object.values(S.deals),contacts:Object.values(S.contacts),tasks:Object.values(S.tasks),requests:Object.values(S.requests),contents:Object.values(S.contents)},null,2);
+const data=JSON.stringify({app:'studio-tefi',version:1,exportedAt:new Date().toISOString(),settings:S.settings||DEFAULT_SETTINGS,accounts:Object.values(S.accounts),rdv:Object.values(S.rdv),docs:Object.values(S.docs),media:Object.values(S.media),deals:Object.values(S.deals),contacts:Object.values(S.contacts),tasks:Object.values(S.tasks),requests:Object.values(S.requests),trips:Object.values(S.trips),unavail:Object.values(S.unavail),projects:Object.values(S.projects),contents:Object.values(S.contents)},null,2);
 const filename='studio-tefi-sauvegarde-'+today()+'.json';
 let dl=null;
 if(window.claude&&typeof window.claude.use==='function'){try{dl=await window.claude.use('downloads');}catch(e){dl=null;}}
@@ -3165,7 +3173,7 @@ if(d.settings&&Array.isArray(d.settings.types))Store.saveSettings(d.settings);
 (d.contents||[]).forEach(c=>{if(c&&c.id)Store.saveContent(normContent(c));});
 (d.rdv||[]).forEach(x=>{if(x&&x.id)Store.saveRdv(x);});
 (d.docs||[]).forEach(x=>{if(x&&x.id)saveDocDirect(x);});
-['media','deals','contacts','tasks','requests'].forEach(c=>(d[c]||[]).forEach(x=>{if(x&&x.id)Store.save(c,x);}));
+['media','deals','contacts','tasks','requests','trips','unavail','projects'].forEach(c=>(d[c]||[]).forEach(x=>{if(x&&x.id)Store.save(c,x);}));
 logChange('settings','update','import','Import de sauvegarde',plural((d.contents||[]).length,'contenu')+', '+plural((d.accounts||[]).length,'compte'),null);
 toast('Import terminé : '+plural((d.contents||[]).length,'contenu')+', '+plural((d.accounts||[]).length,'compte'));
 }
@@ -3192,8 +3200,7 @@ h+='</div>';
 if(c.shoots.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Tournages</h3><span class="mono muted">'+c.shoots.length+'</span></div><div class="rows">'+c.shoots.map(s=>'<div class="row"><div class="row-main" style="cursor:default"><b>'+esc(fmtShoot(s))+'</b><span class="row-meta">'+(s.location?'<span>📍 '+esc(s.location)+'</span>':'<span>Lieu à définir</span>')+(s.note?'<span>'+esc(s.note)+'</span>':'')+'</span></div></div>').join('')+'</div></div>';
 const kv=[['Client',compOf(c.companyId)?compOf(c.companyId).label:''],['Montage',isValidDate(c.editDate)?fmtDay(c.editDate):''],['Durée',c.duration],['Participants',c.cast],['Matériel',c.gear]].filter(x=>x[1]);
 if(kv.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Production</h3></div><div class="kvs">'+kv.map(x=>'<div><span class="label">'+x[0]+'</span><b>'+esc(x[1])+'</b></div>').join('')+'</div></div>';
-const script=(c.scenes||[]).filter(s=>s.body.trim()).map(s=>s.heading.toUpperCase()+'\n'+s.body).join('\n\n');
-if(script)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Script</h3></div><pre class="script-ex">'+esc(script.length>900?script.slice(0,900)+'…':script)+'</pre></div>';
+h+=scriptPeekHtml(c);
 if(c.caption||c.hashtags)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Légende</h3><button class="btn small" data-act="peek-copy">'+ICON.copy+'Copier</button></div><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.caption)+(c.hashtags?'\n<span style="color:var(--accent)">'+esc(c.hashtags)+'</span>':'')+'</p></div>';
 if(c.notes)h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Notes</h3></div><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.notes)+'</p></div>';
 h+=peekExtras(c);
@@ -3213,7 +3220,7 @@ else if(el.dataset.ppf==='time')updateContent(id,c=>{const p=c.publications.find
 });
 $('#peek').addEventListener('click',e=>{if(e.target.id==='peek')closePeek();});
 let draft=null,saveT=null,pending=false,editorOrig=null;
-function isBlank(c){return!c.title.trim()&&!c.publications.length&&!c.notes.trim()&&!c.scenes.some(s=>s.body.trim())&&!c.caption.trim();}
+function isBlank(c){return!c.title.trim()&&!c.publications.length&&!c.notes.trim()&&!c.scenes.some(s=>s.body.trim())&&!(c.scriptText||'').trim()&&!(c.scriptFiles||[]).length&&!c.caption.trim();}
 function openEditor(id,preset){
 if(peekId){peekId=null;$('#peek').hidden=true;}
 editorOrig=id&&S.contents[id]?clone(S.contents[id]):null;
@@ -3276,10 +3283,7 @@ h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Production</h2></div><div clas
 '<label class="field"><span>Date de montage</span><input class="inp" type="date" id="ed-edit" data-f="editDate" value="'+esc(c.editDate)+'"></label>'+
 '<label class="field wide"><span>Acteurs / participants</span><input class="inp" id="ed-cast" data-f="cast" value="'+esc(c.cast)+'" placeholder="Noms séparés par des virgules"></label>'+
 '<label class="field wide"><span>Matériel nécessaire</span><textarea class="inp" id="ed-gear" data-f="gear" rows="2" placeholder="Caméra, micro-cravate, perche, costume…">'+esc(c.gear)+'</textarea></label></div></div>';
-h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Script</h2><button class="btn small" data-act="ed-addscene">'+ICON.plus+'Scène</button></div>'+
-c.scenes.map((s,i)=>'<div class="scene"><div class="scene-h"><input id="sh-'+esc(s.id)+'" data-sf="heading" data-sid="'+esc(s.id)+'" value="'+esc(s.heading)+'" aria-label="Titre de la scène '+(i+1)+'" placeholder="Scène '+(i+1)+' · lieu, moment">'+
-(c.scenes.length>1?'<button class="icon-btn sm" data-act="ed-delscene" data-sid="'+esc(s.id)+'" data-confirm="✓" aria-label="Supprimer la scène">'+ICON.x+'</button>':'')+'</div>'+
-'<textarea id="sb-'+esc(s.id)+'" data-sf="body" data-sid="'+esc(s.id)+'" placeholder="Action, dialogues, plans…\n\nTEFI\nSalut tout le monde !">'+esc(s.body)+'</textarea></div>').join('')+'</div>';
+h+=scriptSection(c);
 const tags=(c.hashtags.match(/#[^\s#]+/g)||[]).length;
 h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Légende &amp; hashtags</h2></div>'+
 '<label class="field"><span>Légende / description</span><textarea class="inp" id="ed-caption" data-f="caption" rows="4" placeholder="Le texte qui accompagnera la publication">'+esc(c.caption)+'</textarea></label>'+
@@ -3315,6 +3319,554 @@ else if(el.dataset.pf==='channel'){const p=draft.publications.find(x=>x.id===el.
 $('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeEditor();});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(draft)closeEditor();else if(peekId)closePeek();else if(!$('#idea').hidden)closeIdea();else if(!$('#rdvm').hidden)closeRdv();else if(!$('#projm').hidden)closePj();else if(!$('#formm').hidden)closeForm();else if(!$('#msgm').hidden)closeMsg();else if(!$('#docsheet').hidden)closeDoc();else if(!$('#taskm').hidden)closeTask();else if(!$('#reqm').hidden)closeReq();else if(!$('#inboxm').hidden)closeInbox();});
 taskPanelEvents();reqPanelEvents();
+/* ================= 6.1 · Outils communs ================= */
+function v61Modal(id,panelId,label,sheet,onClose){
+if(document.getElementById(id))return;
+const d=document.createElement('div');d.className=sheet?'sheet':'peek';d.id=id;d.hidden=true;
+d.innerHTML='<div class="'+(sheet?'sheet-panel':'peek-panel')+'" id="'+panelId+'" role="dialog" aria-modal="true" aria-label="'+esc(label)+'"></div>';
+document.body.appendChild(d);d.addEventListener('click',e=>{if(e.target===d&&onClose)onClose();});
+}
+function v61Unlock(){if(!document.querySelector('.peek:not([hidden]),.sheet:not([hidden])'))document.body.classList.remove('locked');}
+function v61Open(id){$('#'+id).hidden=false;document.body.classList.add('locked');}
+function fmtRange(a,b){if(!isValidDate(a))return'Date à fixer';if(!isValidDate(b)||b<=a)return fmtShort(a);const n=diffDays(b,a)+1;return'du '+fmtShort(a)+' au '+fmtShort(b)+' ('+n+' j)';}
+const curOptions=cur=>Object.keys(CURRENCIES).map(k=>'<option value="'+k+'"'+(k===cur?' selected':'')+'>'+k+'</option>').join('');
+const segBtns=(act,list,cur,extra)=>'<div class="seg kind-seg" role="group">'+list.map(k=>'<button type="button" data-act="'+act+'" data-v="'+esc(k[0])+'"'+(extra||'')+' aria-pressed="'+(cur===k[0])+'">'+esc(k[1])+'</button>').join('')+'</div>';
+const createdByLabel=x=>x&&x.createdBy==='assistant'?'Créé par '+(x.createdByName||roleName('assistant')):'Créé par Tefi';
+
+/* ================= 6.1 · Déplacements ================= */
+const TRIP_DOMAINS=[{id:'video',label:'Production vidéo',c:'#E0533D'},{id:'musique',label:'Musique',c:'#7B2CBF'}];
+const TRIP_TRANSPORTS=['Voiture','Taxi-brousse','Avion','Bus','Train','Bateau','Moto','Autre'];
+const TRIP_BUDGET=[['transport','Transport'],['lodging','Hébergement'],['food','Repas'],['other','Autre']];
+const tripsAll=()=>Object.values(S.trips||{});
+const tripEnd=x=>isValidDate(x.end)&&x.end>=x.start?x.end:x.start;
+const tripDomain=x=>TRIP_DOMAINS.find(d=>d.id===x.domain);
+function tripColor(x){return x.nature==='perso'?settings().persoColor:(tripDomain(x)||{c:'#3D5A80'}).c;}
+function tripCat(x){return x.nature==='perso'?'Perso':'Pro · '+(tripDomain(x)||{label:'à préciser'}).label;}
+function tripTitle(x){return x&&x.title&&x.title.trim()?x.title:(x&&x.destination?'Déplacement à '+x.destination:'Déplacement');}
+function tripBudget(x){const b=x.budget||{};return TRIP_BUDGET.reduce((s,k)=>s+(+b[k[0]]||0),0);}
+function tripMoneyPill(x){if(x.nature!=='pro')return'';if(x.funding==='covered')return'<span class="pill" style="--c:var(--ok)">Pris en charge'+(x.coveredBy?' · '+esc(x.coveredBy):'')+'</span>';
+const t=tripBudget(x);return t?'<span class="pill plain mono">Budget '+esc(money(t,x.currency||'MGA'))+'</span>':'';}
+function tripRow(x,opts){opts=opts||{};const col=tripColor(x);const t=today();const ongoing=x.start<=t&&tripEnd(x)>=t;
+const when=opts.showDate?'<div class="when"><b>'+pd(x.start).getDate()+'</b><span class="mono muted">'+MSHORT[pd(x.start).getMonth()]+'</span></div>':'';
+return'<div class="row trip-row">'+when+'<button class="row-main" data-act="trip-open" data-id="'+esc(x.id)+'"><b>'+esc(tripTitle(x))+'</b><span class="row-meta"><span class="pill" style="--c:'+col+'"><span class="dot" style="--c:'+col+'"></span>Déplacement · '+esc(tripCat(x))+'</span>'+
+'<span>'+esc(fmtRange(x.start,tripEnd(x)))+(x.startTime?' · départ '+esc(x.startTime):'')+'</span>'+(x.destination?'<span>📍 '+esc(x.destination)+'</span>':'')+(x.transport?'<span>'+esc(x.transport)+'</span>':'')+tripMoneyPill(x)+
+(ongoing?'<span class="pill" style="--c:var(--accent)">En cours</span>':(opts.showRel&&x.start>=t?'<span>'+rel(x.start)+'</span>':''))+'</span></button>'+
+(can('trips')?'<div class="row-acts"><button class="icon-btn sm" data-act="trip-open" data-id="'+esc(x.id)+'" aria-label="Modifier">'+ICON.edit+'</button><button class="icon-btn sm danger" data-act="trip-del" data-id="'+esc(x.id)+'" data-confirm="Supprimer ?" aria-label="Supprimer le déplacement">'+ICON.trash+'</button></div>':'')+'</div>';}
+function tripPass(x){const f=S.ui.tripFilter||'';if(!f)return true;if(f==='perso')return x.nature==='perso';if(f==='pro')return x.nature==='pro';return x.nature==='pro'&&x.domain===f;}
+function viewTripsList(){
+const u=S.ui;const t=today();const f=u.tripFilter||'';
+const all=tripsAll().filter(x=>isValidDate(x.start)).sort((a,b)=>(a.start+(a.startTime||'99'))<(b.start+(b.startTime||'99'))?-1:1);
+let h='<div class="filters"><div class="seg sm" role="group" aria-label="Filtrer les déplacements">'+[['','Tous'],['perso','Perso'],['pro','Pro'],['video','Pro · vidéo'],['musique','Pro · musique']].map(k=>'<button data-act="trip-filter" data-v="'+k[0]+'" aria-pressed="'+(f===k[0])+'">'+k[1]+'</button>').join('')+'</div>'+
+'<span class="legend" style="margin:0"><span><span class="dot" style="--c:'+settings().persoColor+'"></span>Perso</span>'+TRIP_DOMAINS.map(d=>'<span><span class="dot" style="--c:'+d.c+'"></span>'+d.label+'</span>').join('')+'</span></div>';
+const y=String(pd(t).getFullYear());const pro=all.filter(x=>x.nature==='pro'&&x.start.slice(0,4)===y);
+if(pro.length){const byCur={};let covered=0;pro.forEach(x=>{if(x.funding==='covered'){covered++;return;}const v=tripBudget(x);if(v){const c=x.currency||'MGA';byCur[c]=(byCur[c]||0)+v;}});
+const days=pro.reduce((s,x)=>s+diffDays(tripEnd(x),x.start)+1,0);
+const tile=(l,v,s)=>'<div class="stat"><span class="label">'+l+'</span><strong>'+v+'</strong><span class="muted">'+s+'</span></div>';
+h+='<section class="panel"><div class="panel-h"><h2>Déplacements pro en '+y+'</h2></div><div class="stats figs">'+
+TRIP_DOMAINS.map(d=>tile(d.label,pro.filter(x=>x.domain===d.id).length,'déplacement'+(pro.filter(x=>x.domain===d.id).length>1?'s':''))).join('')+
+tile('Jours sur la route',days,'en pro')+tile('Budget prévu',Object.keys(byCur).length?Object.keys(byCur).map(k=>esc(money(byCur[k],k))).join('<br>'):'0',plural(covered,'déplacement')+' pris en charge')+'</div></section>';}
+const up=all.filter(x=>tripEnd(x)>=t&&tripPass(x));const past=all.filter(x=>tripEnd(x)<t&&tripPass(x)).reverse().slice(0,60);
+h+=up.length?'<div class="panel" style="padding:6px 14px"><div class="rows">'+up.map(x=>tripRow(x,{showDate:true,showRel:true})).join('')+'</div></div>'
+:'<div class="empty"><b>Aucun déplacement à venir</b>Ajoute un déplacement perso ou pro : il apparaîtra aussi dans le calendrier.'+(can('trips')?'<br><button class="btn primary" data-act="trip-new">Nouveau déplacement</button>':'')+'</div>';
+if(past.length)h+='<details class="fold" id="trip-past"><summary>Déplacements passés ('+past.length+')</summary><div class="panel" style="padding:6px 14px;margin-top:10px"><div class="rows">'+past.map(x=>tripRow(x,{showDate:true})).join('')+'</div></div></details>';
+return h;
+}
+let tripDraft=null;
+function openTrip(id,preset){preset=preset||{};
+const ro=!can('trips');if(!id&&ro){toast(DENIED);return;}
+v61Modal('tripm','trip-panel','Déplacement',false,closeTrip);
+tripDraft=id&&S.trips[id]?clone(S.trips[id]):{id:'v'+uid(),title:'',nature:'pro',domain:'video',start:preset.date||today(),end:'',startTime:'',endTime:'',destination:'',transport:'',lodging:'',companyId:'',projectId:preset.project||'',funding:'budget',budget:{},currency:'MGA',coveredBy:'',notes:'',createdBy:ROLE,createdByName:roleName(ROLE),createdAt:Date.now()};
+renderTrip();v61Open('tripm');if(!id){const t=$('#tf-title');if(t)t.focus();}}
+function closeTrip(){tripDraft=null;const m=$('#tripm');if(m)m.hidden=true;v61Unlock();}
+function renderTrip(){
+const x=tripDraft;if(!x)return;const isNew=!S.trips[x.id];const col=tripColor(x);const ro=!can('trips');const dis=ro?' disabled':'';
+let h='<div class="peek-h"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="label"><span class="dot" style="--c:'+col+'"></span> '+(isNew?'Nouveau déplacement':'Déplacement')+'</span><input class="title-inp" style="font-size:22px" id="tf-title" data-tf="title" value="'+esc(x.title)+'" placeholder="Ex. Tournage à Toamasina"'+dis+' aria-label="Titre"></div><button class="icon-btn" data-act="trip-close" aria-label="Fermer">'+ICON.x+'</button></div><div class="peek-b">';
+h+='<div class="field"><span>Nature</span>'+segBtns('trip-nature',[['perso','Perso'],['pro','Pro']],x.nature)+'</div>';
+if(x.nature==='pro'){
+h+='<div class="field"><span>Pour quoi ?</span>'+segBtns('trip-domain',TRIP_DOMAINS.map(d=>[d.id,d.label]),x.domain)+'</div>';
+h+='<div class="f-grid"><label class="field"><span>Client</span><select class="inp" id="tf-comp" data-tf="companyId"'+dis+'><option value="">Aucun client précis</option>'+companies().map(c=>'<option value="'+esc(c.id)+'"'+(c.id===x.companyId?' selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select></label>'+
+'<label class="field" style="grid-column:span 2"><span>Projet lié</span><select class="inp" id="tf-prj" data-tf="projectId"'+dis+'><option value="">Aucun projet</option>'+projectsAll().map(p=>'<option value="'+esc(p.id)+'"'+(p.id===x.projectId?' selected':'')+'>'+esc(prjTitle(p))+'</option>').join('')+'</select></label></div>';
+}
+h+='<div class="f-grid"><label class="field"><span>Départ</span><input class="inp" type="date" id="tf-start" data-tf="start" value="'+esc(x.start)+'"'+dis+'></label><label class="field"><span>Heure de départ</span><input class="inp" type="time" id="tf-stime" data-tf="startTime" value="'+esc(x.startTime)+'"'+dis+'></label><span></span>'+
+'<label class="field"><span>Retour</span><input class="inp" type="date" id="tf-end" data-tf="end" value="'+esc(x.end)+'" min="'+esc(x.start)+'"'+dis+'></label><label class="field"><span>Heure de retour</span><input class="inp" type="time" id="tf-etime" data-tf="endTime" value="'+esc(x.endTime)+'"'+dis+'></label></div>';
+h+='<div class="f-grid"><label class="field"><span>Destination</span><input class="inp" id="tf-dest" data-tf="destination" value="'+esc(x.destination)+'" placeholder="Ville, lieu"'+dis+'></label>'+
+'<label class="field"><span>Transport</span><select class="inp" id="tf-tr" data-tf="transport"'+dis+'><option value="">À préciser</option>'+TRIP_TRANSPORTS.map(v=>'<option'+(v===x.transport?' selected':'')+'>'+esc(v)+'</option>').join('')+'</select></label>'+
+'<label class="field"><span>Hébergement</span><input class="inp" id="tf-lodge" data-tf="lodging" value="'+esc(x.lodging)+'" placeholder="Hôtel, chez…"'+dis+'></label></div>';
+if(x.nature==='pro'){
+h+='<div class="ed-sec"><div class="ed-sec-h"><h3>Budget</h3></div>'+segBtns('trip-funding',[['budget','Budget à prévoir'],['covered','Pris en charge']],x.funding||'budget');
+if(x.funding==='covered')h+='<label class="field"><span>Pris en charge par</span><input class="inp" id="tf-cov" data-tf="coveredBy" value="'+esc(x.coveredBy)+'" placeholder="Client, label, production…"'+dis+'></label>';
+else h+='<div class="f-grid">'+TRIP_BUDGET.map(k=>'<label class="field"><span>'+k[1]+'</span><input class="inp mono" type="number" min="0" step="any" id="tf-b-'+k[0]+'" data-tb="'+k[0]+'" value="'+esc((x.budget||{})[k[0]]||'')+'" placeholder="0"'+dis+'></label>').join('')+
+'<label class="field"><span>Devise</span><select class="inp" id="tf-cur" data-tf="currency"'+dis+'>'+curOptions(x.currency||'MGA')+'</select></label></div><span class="hint" id="tf-total">Total : '+esc(money(tripBudget(x),x.currency||'MGA'))+'</span>';
+h+='</div>';}
+h+='<label class="field"><span>Notes</span><textarea class="inp" id="tf-notes" data-tf="notes" rows="3" placeholder="Programme, contacts sur place, à emporter…"'+dis+'>'+esc(x.notes)+'</textarea></label>';
+const offs=offsInRange(x.start,tripEnd(x));if(offs.length)h+='<p class="off-warn">Attention : '+esc(offs.map(o=>offWho(o)+' '+(o.status==='pending'?'(demande en attente)':'indisponible')).join(', '))+' sur ces dates.</p>';
+if(!isNew)h+='<span class="hint">Ajouté par '+esc(x.createdByName||'')+(x.createdAt?' · '+fmtStamp(x.createdAt):'')+'</span>';
+h+='</div><div class="peek-f">'+(ro?'<button class="btn" data-act="trip-close">Fermer</button>':'<button class="btn primary" data-act="trip-save">'+ICON.check+'Enregistrer</button><button class="btn" data-act="trip-close">Annuler</button>'+(isNew?'':'<button class="btn danger" data-act="trip-del" data-id="'+esc(x.id)+'" data-confirm="Supprimer ?">'+ICON.trash+'Supprimer</button>'))+'</div>';
+morph($('#trip-panel'),h);
+}
+function saveTrip(){
+const x=clone(tripDraft);if(!isValidDate(x.start)){toast('Choisis la date de départ.');return;}
+if(isValidDate(x.end)&&x.end<x.start){toast('Le retour est avant le départ.');return;}
+if(x.nature==='perso'){x.domain='';x.companyId='';x.funding='';x.budget={};x.coveredBy='';}
+else if(x.funding==='covered')x.budget={};else x.coveredBy='';
+const before=S.trips[x.id];Store.save('trips',x);
+logChange('trip',before?'update':'create',x.id,tripTitle(x),(before?'Déplacement modifié':'Déplacement ajouté')+' · '+fmtRange(x.start,tripEnd(x)),before||null);
+const offs=offsInRange(x.start,tripEnd(x));
+toast(offs.length?'Enregistré · attention : '+offs.map(offWho).join(', ')+' indisponible sur ces dates':(before?'Déplacement enregistré':'Déplacement ajouté'));closeTrip();
+}
+function deleteTrip(id){const before=S.trips[id];if(!before)return;Store.del('trips',id);logChange('trip','delete',id,tripTitle(before),'Déplacement supprimé',before);
+if(tripDraft&&tripDraft.id===id)closeTrip();
+toast('Déplacement supprimé',()=>{Store.save('trips',before);logChange('trip','restore',id,tripTitle(before),'Suppression annulée',null);});}
+/* ================= 6.1 · Indisponibilités ================= */
+const OFF_ST={pending:['En attente de Tefi','#C98C00'],ok:['Validée','#14A37F'],refused:['Refusée','#D2402C']};
+const OFF_PERIODS=[['day','Journée entière'],['am','Matin'],['pm','Après-midi']];
+const offsAll=()=>Object.values(S.unavail||{});
+const offEnd=x=>isValidDate(x.end)&&x.end>=x.start?x.end:x.start;
+const offWho=x=>x.who==='assistant'?roleName('assistant'):'Tefi';
+const offMax=()=>Math.max(1,+settings().offPersoMax||4);
+const offPeriodLabel=x=>x.period==='am'?'matin':x.period==='pm'?'après-midi':'';
+function offReasonText(x){return x.persoReason?'Raison perso':(x.reason||'');}
+function offsInRange(a,b,who){if(!isValidDate(a))return[];b=isValidDate(b)&&b>=a?b:a;return offsAll().filter(x=>x.status!=='refused'&&isValidDate(x.start)&&x.start<=b&&offEnd(x)>=a&&(!who||x.who===who));}
+function offPersoCount(exceptId){const from=addDays(today(),-365);return offsAll().filter(x=>x.id!==exceptId&&x.who==='assistant'&&x.persoReason&&x.status!=='refused'&&isValidDate(x.start)&&x.start>=from).length;}
+function offPill(x){const s=OFF_ST[x.status]||OFF_ST.ok;return x.status==='ok'&&x.who==='admin'?'':'<span class="pill" style="--c:'+s[1]+'">'+s[0]+'</span>';}
+function offRow(x,opts){opts=opts||{};
+const when=opts.showDate?'<div class="when"><b>'+pd(x.start).getDate()+'</b><span class="mono muted">'+MSHORT[pd(x.start).getMonth()]+'</span></div>':'';
+const per=offPeriodLabel(x);const r=offReasonText(x);
+return'<div class="row off-row'+(x.status==='pending'?' pending':'')+'">'+when+'<button class="row-main" data-act="off-open" data-id="'+esc(x.id)+'"><b>'+esc(offWho(x))+' n\'est pas disponible'+(per?' ('+per+')':'')+'</b><span class="row-meta"><span class="pill" style="--c:#5D6472">Indisponibilité</span><span>'+esc(fmtRange(x.start,offEnd(x)))+'</span>'+offPill(x)+
+(r&&(isAdmin()||x.who==='assistant')?'<span>'+esc(r)+'</span>':'')+'</span></button></div>';}
+function canEditOff(x){if(isAdmin())return true;return x.who==='assistant'&&x.status==='pending';}
+let offDraft=null;
+function openOff(id,preset){preset=preset||{};
+v61Modal('offm','off-panel','Indisponibilité',false,closeOff);
+const x=id&&S.unavail[id];
+if(id&&!x){toast('Cette indisponibilité n\'existe plus.');return;}
+offDraft=x?clone(x):{id:'u'+uid(),who:isAdmin()?'admin':'assistant',start:preset.date||today(),end:'',period:'day',reason:'',persoReason:false,status:isAdmin()?'ok':'pending',createdBy:ROLE,createdByName:roleName(ROLE),createdAt:Date.now()};
+if(x&&ROLE==='assistant'&&x.who==='assistant'&&x.decision){const seen=lsGet('studio-tefi-seen-off')||{};seen[x.id]=x.decision.at;lsSet('studio-tefi-seen-off',seen);}
+renderOff();v61Open('offm');}
+function closeOff(){offDraft=null;const m=$('#offm');if(m)m.hidden=true;v61Unlock();}
+function renderOff(){
+const x=offDraft;if(!x)return;const isNew=!S.unavail[x.id];const edit=isNew||canEditOff(x);const dis=edit?'':' disabled';
+const single=!isValidDate(x.end)||x.end<=x.start;const asst=ROLE==='assistant';
+let h='<div class="peek-h"><div style="flex:1;min-width:0"><span class="label">'+(isNew?(asst?'Demande d\'indisponibilité':'Nouvelle indisponibilité'):'Indisponibilité')+'</span><h2 style="margin:4px 0 0">'+esc(offWho(x))+' n\'est pas disponible</h2></div><button class="icon-btn" data-act="off-close" aria-label="Fermer">'+ICON.x+'</button></div><div class="peek-b">';
+if(!isNew)h+='<div class="card-f">'+(offPill(x)||'<span class="pill" style="--c:var(--ok)">Inscrite au calendrier</span>')+'<span class="hint">Ajoutée par '+esc(x.createdByName||'')+(x.createdAt?' · '+fmtStamp(x.createdAt):'')+'</span></div>';
+if(isAdmin()&&isNew)h+='<div class="field"><span>Qui ?</span>'+segBtns('off-who',[['admin','Tefi'],['assistant',roleName('assistant')]],x.who)+'</div>';
+h+='<div class="f-grid"><label class="field"><span>Du</span><input class="inp" type="date" id="of-start" data-of="start" value="'+esc(x.start)+'"'+dis+'></label><label class="field"><span>Au (si plusieurs jours)</span><input class="inp" type="date" id="of-end" data-of="end" value="'+esc(x.end)+'" min="'+esc(x.start)+'"'+dis+'></label></div>';
+if(single)h+='<div class="field"><span>Moment</span>'+(edit?segBtns('off-period',OFF_PERIODS,x.period||'day'):'<b>'+esc((OFF_PERIODS.find(p=>p[0]===(x.period||'day'))||OFF_PERIODS[0])[1])+'</b>')+'</div>';
+if(x.who==='assistant'){
+const n=offPersoCount(x.id);const max=offMax();
+if(edit&&!isAdmin())h+='<label class="perm" style="padding:0"><span><b>Raison perso</b><br><span class="hint">Tu n\'as pas à détailler. À utiliser avec modération : '+n+' sur '+max+' utilisée'+(n>1?'s':'')+' ces 12 derniers mois.</span></span><input type="checkbox" class="switch" id="of-perso" data-of-perso="1"'+(x.persoReason?' checked':'')+'></label>';
+if(x.persoReason&&n>=max)h+='<p class="off-warn">'+(asst?'Tu as déjà utilisé '+n+' raisons perso sur 12 mois. Tefi verra ce compteur : ajoute un mot si tu peux.':esc(roleName('assistant'))+' a déjà utilisé '+n+' raisons perso sur 12 mois (repère : '+max+').')+'</p>';
+else if(isAdmin()&&x.persoReason)h+='<p class="hint" style="margin:0">Raisons perso sur 12 mois : '+n+' (repère : '+max+').</p>';
+}
+if((isAdmin()||x.who==='assistant')&&(!x.persoReason||isAdmin()))h+='<label class="field"><span>'+(x.persoReason?'Précision (facultatif)':x.who==='assistant'&&!isAdmin()?'Raison':'Motif (facultatif)')+'</span><textarea class="inp" id="of-reason" data-of="reason" rows="2" placeholder="'+(x.who==='assistant'?'Ex. examen, rendez-vous médical, mariage…':'Ex. voyage, studio, repos…')+'"'+dis+'>'+esc(x.reason)+'</textarea></label>';
+if(x.decision&&!isNew)h+='<div class="review'+(x.status==='refused'?' refusee':'')+'"><b>'+(x.status==='refused'?'Refusée par Tefi':'Validée par Tefi')+' · '+fmtStamp(x.decision.at)+'</b>'+(x.decision.comment?esc(x.decision.comment):'Sans commentaire')+'</div>';
+if(isAdmin()&&!isNew&&x.who==='assistant'&&x.status==='pending')h+='<label class="field"><span>Ta réponse (obligatoire pour refuser)</span><textarea class="inp" id="of-decision" rows="2" placeholder="Ex. OK, bon courage ! / Impossible ce jour-là : tournage prévu."></textarea></label>';
+const busy=offBusy(x);if(busy.length)h+='<p class="off-warn">Déjà prévu sur ces dates : '+esc(busy.slice(0,4).join(' · '))+(busy.length>4?'…':'')+'</p>';
+h+='</div><div class="peek-f">';
+if(isAdmin()&&!isNew&&x.who==='assistant'&&x.status==='pending')h+='<button class="btn primary" data-act="off-decide" data-ok="1">'+ICON.check+'Valider</button><button class="btn danger" data-act="off-decide" data-ok="0">Refuser</button>';
+else if(edit)h+='<button class="btn primary" data-act="off-save">'+ICON.check+(isNew&&asst?'Envoyer la demande':'Enregistrer')+'</button>';
+h+='<button class="btn" data-act="off-close">'+(edit?'Annuler':'Fermer')+'</button>';
+if(!isNew&&(isAdmin()||x.who==='assistant'))h+='<button class="btn danger" data-act="off-del" data-id="'+esc(x.id)+'" data-confirm="Sûr ?">'+ICON.trash+(asst&&x.status==='pending'?'Retirer la demande':'Supprimer')+'</button>';
+morph($('#off-panel'),h+'</div>');
+}
+function offBusy(x){const a=x.start,b=offEnd(x);if(!isValidDate(a))return[];const out=[];
+Object.values(S.rdv).forEach(r=>{if(isValidDate(r.date)&&r.date>=a&&r.date<=b)out.push('RDV '+fmtShort(r.date)+' · '+(r.title||''));});
+contents().forEach(c=>(c.shoots||[]).forEach(s=>{if(isValidDate(s.start)&&s.start<=b&&shootEnd(s)>=a)out.push('Tournage '+titleOf(c));}));
+tripsAll().forEach(t=>{if(isValidDate(t.start)&&t.start<=b&&tripEnd(t)>=a)out.push('Déplacement '+tripTitle(t));});
+return out;}
+function saveOff(){
+const x=clone(offDraft);if(!isValidDate(x.start)){toast('Choisis une date.');return;}
+if(isValidDate(x.end)&&x.end<x.start){toast('La date de fin est avant le début.');return;}
+if(isValidDate(x.end)&&x.end>x.start)x.period='day';
+x.reason=(x.reason||'').trim();
+if(x.who==='assistant'&&!isAdmin()&&!x.persoReason&&!x.reason){toast('Donne une raison, ou choisis « Raison perso ».');return;}
+const before=S.unavail[x.id];
+if(isAdmin()){x.status='ok';if(x.who==='assistant'&&!x.decision)x.decision={ok:true,comment:'',at:Date.now(),by:'Tefi'};}
+else{x.who='assistant';x.status='pending';x.decision=null;}
+Store.save('unavail',x);
+logChange('off',before?'update':'create',x.id,offWho(x)+' indisponible',fmtRange(x.start,offEnd(x))+(x.status==='pending'?' · demande envoyée':''),before||null);
+toast(x.status==='pending'?'Demande envoyée à Tefi':'Indisponibilité inscrite au calendrier');closeOff();
+}
+function decideOff(ok){
+const x=offDraft&&S.unavail[offDraft.id];if(!x||!isAdmin())return;const c=($('#of-decision')&&$('#of-decision').value||'').trim();
+if(!ok&&!c){toast('Écris une justification pour refuser.');const t=$('#of-decision');if(t)t.focus();return;}
+const before=clone(x);const y=clone(x);y.status=ok?'ok':'refused';y.decision={ok,comment:c,at:Date.now(),by:'Tefi'};Store.save('unavail',y);
+logChange('off','update',y.id,offWho(y)+' indisponible',(ok?'Validée':'Refusée')+(c?' : '+c:''),before);
+toast(ok?'Indisponibilité validée':'Demande refusée');closeOff();
+}
+function deleteOff(id){const before=S.unavail[id];if(!before)return;
+if(!isAdmin()&&before.who!=='assistant'){toast(DENIED);return;}
+Store.del('unavail',id);logChange('off','delete',id,offWho(before)+' indisponible','Supprimée · '+fmtRange(before.start,offEnd(before)),before);closeOff();
+toast('Indisponibilité retirée',()=>{Store.save('unavail',before);logChange('off','restore',id,offWho(before)+' indisponible','Suppression annulée',null);});}
+function offSettingsPanel(){
+return'<section class="panel"><div class="panel-h"><h2>Indisponibilités de '+esc(roleName('assistant'))+'</h2></div><p class="hint" style="margin:-4px 0 12px">Ses demandes arrivent dans « À traiter ». Elle peut cocher « Raison perso » sans détailler : au-delà du repère ci-dessous sur 12 mois, un avertissement s\'affiche pour vous deux.</p>'+
+'<label class="field" style="max-width:260px"><span>Repère de raisons perso sur 12 mois</span><input class="inp mono" type="number" min="1" max="52" id="off-max" data-off-max="1" value="'+offMax()+'"></label></section>';
+}
+/* ================= 6.1 · Projets ================= */
+const PRJ_TYPES=[['album','Album'],['ep','EP'],['single','Single'],['clip','Clip'],['serie','Série'],['court','Court-métrage'],['film','Film'],['docu','Documentaire'],['event','Événement / concert'],['autre','Autre']];
+const PRJ_UNIV=[{id:'musique',label:'Musique',c:'#7B2CBF'},{id:'video',label:'Vidéo',c:'#E0533D'},{id:'mixte',label:'Musique + vidéo',c:'#0F7B6C'},{id:'autre',label:'Autre',c:'#5D6472'}];
+const PRJ_ST=[{id:'reflexion',label:'En réflexion',c:'#8A8FA3'},{id:'dev',label:'En développement',c:'#5B6CFF'},{id:'prod',label:'En production',c:'#C98C00'},{id:'sorti',label:'Sorti',c:'#14A37F'},{id:'pause',label:'En pause',c:'#5D6472'}];
+const PRJ_ACTIVE=['reflexion','dev','prod'];
+const projectsAll=()=>Object.values(S.projects||{}).sort((a,b)=>(PRJ_ST.findIndex(s=>s.id===a.status)-PRJ_ST.findIndex(s=>s.id===b.status))||((b.updatedAt||0)-(a.updatedAt||0)));
+const prjTitle=p=>p&&p.title&&p.title.trim()?p.title:'Projet sans titre';
+const prjType=p=>(PRJ_TYPES.find(t=>t[0]===p.type)||PRJ_TYPES[PRJ_TYPES.length-1])[1];
+const prjUniv=p=>PRJ_UNIV.find(u=>u.id===p.universe)||PRJ_UNIV[3];
+const prjSt=p=>PRJ_ST.find(s=>s.id===p.status)||PRJ_ST[0];
+function normPrj(p){p=Object.assign({title:'',type:'album',universe:'musique',status:'reflexion',pitch:'',releaseMode:'none',releaseDate:'',releaseFrom:'',releaseTo:'',goals:[],contentIds:[],links:[],notes:''},p);
+['goals','contentIds','links'].forEach(k=>{if(!Array.isArray(p[k]))p[k]=[];});return p;}
+function prjProgress(p){const n=(p.goals||[]).length,d=(p.goals||[]).filter(g=>g.done).length;return{n,d,pct:n?Math.round(d/n*100):0};}
+function prjLateGoals(p){const t=today();return(p.goals||[]).filter(g=>!g.done&&isValidDate(g.due)&&g.due<t);}
+const monthLabel=(ym,withYear)=>{if(!/^\d{4}-\d{2}$/.test(ym||''))return'';const[y,m]=ym.split('-').map(Number);return MONTHS[m-1]+(withYear?' '+y:'');};
+function prjRelease(p){
+if(p.releaseMode==='date'&&isValidDate(p.releaseDate)){const d=pd(p.releaseDate);return{label:'le '+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear(),target:p.releaseDate};}
+if(p.releaseMode==='period'&&/^\d{4}-\d{2}$/.test(p.releaseFrom||'')){const a=p.releaseFrom,b=/^\d{4}-\d{2}$/.test(p.releaseTo||'')&&p.releaseTo>a?p.releaseTo:'';
+const label=!b?'en '+monthLabel(a,true):a.slice(0,4)===b.slice(0,4)?'entre '+monthLabel(a)+' et '+monthLabel(b,true):'entre '+monthLabel(a,true)+' et '+monthLabel(b,true);return{label,target:a+'-01'};}
+return null;}
+function prjBar(p){const g=prjProgress(p);const u=prjUniv(p);
+return g.n?'<div class="ck-bar"><div class="pbar ok"><i style="width:'+g.pct+'%;background:'+u.c+'"></i></div><span class="mono muted">'+g.d+'/'+g.n+' · '+g.pct+' %</span></div>':'<span class="hint">Aucun objectif pour l\'instant</span>';}
+function prjCard(p){const u=prjUniv(p),st=prjSt(p),r=prjRelease(p),late=prjLateGoals(p).length;
+return'<button class="prj-card" data-act="prj-open" data-id="'+esc(p.id)+'" style="--u:'+u.c+'"><div class="card-f"><span class="pill" style="--c:'+u.c+'">'+esc(prjType(p))+' · '+esc(u.label)+'</span><span class="pill" style="--c:'+st.c+'">'+esc(st.label)+'</span></div>'+
+'<b class="prj-t">'+esc(prjTitle(p))+'</b>'+(p.pitch?'<p class="prj-p">'+esc(p.pitch)+'</p>':'')+prjBar(p)+
+'<span class="row-meta">'+(r?'<span>Sortie visée '+esc(r.label)+(r.target>=today()&&p.status!=='sorti'?' · '+rel(r.target):'')+'</span>':'<span>Sortie à fixer</span>')+
+(late?'<span class="late-txt">'+plural(late,'objectif')+' en retard</span>':'')+(p.contentIds.length?'<span>'+plural(p.contentIds.length,'contenu lié','contenus liés')+'</span>':'')+'</span>'+
+'<span class="hint">'+esc(createdByLabel(p))+'</span></button>';}
+function viewProjets(){
+const u=S.ui;const f=u.prjFilter||'actifs',uf=u.prjUniv||'';
+const all=projectsAll().map(normPrj);
+const L=all.filter(p=>(f==='tous'||(f==='actifs'&&PRJ_ACTIVE.includes(p.status))||p.status===f)&&(!uf||p.universe===uf));
+let h='<div class="wrap"><div class="head"><div><span class="label">Projets</span><h1>Projets</h1><p class="muted">Albums, clips, séries… Développe tes idées, fixe une sortie, suis tes objectifs et relie les contenus qui en font partie.</p></div>'+
+'<button class="btn primary need-projets" data-act="prj-new">'+ICON.plus+'Nouveau projet</button></div>';
+h+='<div class="filters"><div class="seg sm" role="group" aria-label="Statut">'+[['actifs','En cours'],['sorti','Sortis'],['pause','En pause'],['tous','Tous']].map(k=>'<button data-act="prj-filter" data-v="'+k[0]+'" aria-pressed="'+(f===k[0])+'">'+k[1]+' <span class="mono">'+all.filter(p=>k[0]==='tous'||(k[0]==='actifs'?PRJ_ACTIVE.includes(p.status):p.status===k[0])).length+'</span></button>').join('')+'</div>'+
+'<div class="seg sm" role="group" aria-label="Univers">'+[['','Tous univers']].concat(PRJ_UNIV.map(x=>[x.id,x.label])).map(k=>'<button data-act="prj-univ" data-v="'+k[0]+'" aria-pressed="'+(uf===k[0])+'">'+esc(k[1])+'</button>').join('')+'</div></div>';
+if(!all.length)return h+'<div class="empty"><b>Aucun projet pour l\'instant</b>Un album, un clip, une série, le « Projet Oscar »… Crée ton premier projet pour poser l\'idée, la sortie visée et les objectifs.'+(can('projets')?'<br><button class="btn primary" data-act="prj-new">Nouveau projet</button>':'')+'</div></div>';
+const up=all.filter(p=>PRJ_ACTIVE.includes(p.status)&&prjRelease(p)).sort((a,b)=>prjRelease(a).target<prjRelease(b).target?-1:1);
+if(up.length&&f==='actifs')h+='<section class="panel"><div class="panel-h"><h2>Prochaines sorties</h2></div><div class="rel-line">'+up.slice(0,8).map(p=>{const r=prjRelease(p);return'<button class="rel-item" data-act="prj-open" data-id="'+esc(p.id)+'" style="--c:'+prjUniv(p).c+'"><span class="label">'+esc(r.label)+'</span><b>'+esc(prjTitle(p))+'</b><span class="mono muted">'+prjProgress(p).pct+' %</span></button>';}).join('')+'</div></section>';
+h+=L.length?'<div class="prj-grid">'+L.map(prjCard).join('')+'</div>':'<div class="empty"><b>Rien ici</b>Aucun projet avec ces filtres.</div>';
+return h+'</div>';
+}
+let prjDraft=null,prjOrig=null,prjT=null;
+function prjCanDelete(p){return isAdmin()||(can('projets')&&p&&p.createdBy==='assistant');}
+function openPrj(id){
+if(peekId)closePeek();
+v61Modal('prjsheet','prj-panel','Projet',true,closePrj);
+if(id&&!S.projects[id]){toast('Ce projet n\'existe plus.');return;}
+if(!id&&!can('projets')){toast(DENIED);return;}
+prjOrig=id?clone(S.projects[id]):null;
+prjDraft=prjOrig?normPrj(clone(prjOrig)):normPrj({id:'j'+uid(),createdBy:ROLE,createdByName:roleName(ROLE),createdAt:Date.now()});
+renderPrj();v61Open('prjsheet');if(!id){const t=$('#pj-title');if(t)t.focus();}}
+function prjSchedule(){clearTimeout(prjT);prjT=setTimeout(prjFlush,600);const s=$('#prj-saved');if(s){s.className='saved pending';s.innerHTML='<i></i>Modification…';}}
+function prjFlush(){clearTimeout(prjT);if(!prjDraft||!can('projets'))return;if(!prjDraft.title.trim()&&!S.projects[prjDraft.id])return;Store.save('projects',prjDraft);const s=$('#prj-saved');if(s){s.className='saved';s.innerHTML='<i></i>Enregistré';}}
+function prjCommitLog(){if(!prjDraft)return;const saved=S.projects[prjDraft.id];if(!saved)return;
+if(!prjOrig){logChange('project','create',saved.id,prjTitle(saved),'Projet créé',null);prjOrig=clone(saved);return;}
+const strip2=o=>{const c=clone(o);delete c.updatedAt;return JSON.stringify(c);};
+if(strip2(saved)!==strip2(prjOrig)){logChange('project','update',saved.id,prjTitle(saved),'Projet modifié',prjOrig);prjOrig=clone(saved);}}
+function closePrj(){prjFlush();prjCommitLog();prjDraft=null;prjOrig=null;const m=$('#prjsheet');if(m)m.hidden=true;v61Unlock();}
+function prjMonthSelects(key,val){const y0=pd(today()).getFullYear()-1;const[y,m]=/^\d{4}-\d{2}$/.test(val||'')?val.split('-'):['',''];
+return'<div class="link-line"><select class="inp" id="pj-'+key+'-m" data-prjm="'+key+'" data-part="m" aria-label="Mois">'+'<option value="">Mois</option>'+MONTHS.map((x,i)=>'<option value="'+pad(i+1)+'"'+(pad(i+1)===m?' selected':'')+'>'+x+'</option>').join('')+'</select>'+
+'<select class="inp" id="pj-'+key+'-y" data-prjm="'+key+'" data-part="y" aria-label="Année" style="max-width:110px"><option value="">Année</option>'+Array.from({length:8},(_,i)=>String(y0+i)).map(v=>'<option'+(v===y?' selected':'')+'>'+v+'</option>').join('')+'</select></div>';}
+function renderPrj(){
+const p=prjDraft;if(!p)return;const isNew=!S.projects[p.id];const ro=!can('projets');const dis=ro?' disabled':'';const u=prjUniv(p);
+const body=$('#prj-panel .sheet-body');const st=body?body.scrollTop:0;const ae=document.activeElement;const fid=ae&&ae.id&&$('#prj-panel').contains(ae)?ae.id:null;
+let h='<div class="sheet-top"><button class="icon-btn" data-act="prj-close" aria-label="Fermer">'+ICON.x+'</button><span class="saved" id="prj-saved"><i></i>'+(isNew?'Brouillon : donne un titre':'Enregistré')+'</span><button class="btn small primary" data-act="prj-close">Terminé</button></div><div class="sheet-body">';
+h+='<div class="ed-sec"><span class="label" style="color:'+u.c+'">'+esc(createdByLabel(p))+(p.createdAt?' · '+fmtStamp(p.createdAt):'')+'</span><input class="title-inp" id="pj-title" data-pj="title" value="'+esc(p.title)+'" placeholder="Nom du projet (ex. Projet Oscar)" aria-label="Nom du projet"'+dis+'>'+
+'<div class="f-grid"><label class="field"><span>Type</span><select class="inp" id="pj-type" data-pj="type"'+dis+'>'+PRJ_TYPES.map(t=>'<option value="'+t[0]+'"'+(t[0]===p.type?' selected':'')+'>'+t[1]+'</option>').join('')+'</select></label>'+
+'<label class="field"><span>Univers</span><select class="inp" id="pj-univ" data-pj="universe"'+dis+'>'+PRJ_UNIV.map(x=>'<option value="'+x.id+'"'+(x.id===p.universe?' selected':'')+'>'+x.label+'</option>').join('')+'</select></label></div>'+
+'<div class="field"><span>Statut</span><div class="status-pick">'+PRJ_ST.map(s=>'<button type="button" data-act="prj-status" data-v="'+s.id+'" style="--c:'+s.c+'" aria-pressed="'+(p.status===s.id)+'"'+dis+'><span class="dot" style="--c:'+s.c+'"></span>'+s.label+'</button>').join('')+'</div></div>'+
+'<label class="field"><span>L\'idée en quelques mots</span><textarea class="inp" id="pj-pitch" data-pj="pitch" rows="3" placeholder="De quoi parle le projet, l\'ambiance, le public visé…"'+dis+'>'+esc(p.pitch)+'</textarea></label></div>';
+const r=prjRelease(p);
+h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Sortie</h2>'+(r?'<span class="pill" style="--c:'+u.c+'">'+esc(r.label)+(r.target>=today()&&p.status!=='sorti'?' · '+rel(r.target):'')+'</span>':'')+'</div>'+
+(ro?'':segBtns('prj-rmode',[['none','Pas encore fixée'],['date','Date précise'],['period','Période cible']],p.releaseMode||'none'));
+if(p.releaseMode==='date')h+='<label class="field" style="max-width:240px"><span>Date de sortie</span><input class="inp" type="date" id="pj-rdate" data-pj="releaseDate" value="'+esc(p.releaseDate)+'"'+dis+'></label>';
+if(p.releaseMode==='period')h+='<div class="f-grid"><div class="field" style="grid-column:span 2"><span>Entre</span>'+prjMonthSelects('releaseFrom',p.releaseFrom)+'</div><div class="field" style="grid-column:span 2"><span>Et (facultatif)</span>'+prjMonthSelects('releaseTo',p.releaseTo)+'</div></div>';
+h+='</div>';
+const g=prjProgress(p);
+h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Objectifs</h2><span class="mono muted">'+g.d+'/'+g.n+'</span></div>'+prjBar(p)+
+'<div class="ck-list">'+p.goals.map(x=>{const late=!x.done&&isValidDate(x.due)&&x.due<today();
+return'<div class="ck goal'+(x.done?' done':'')+(late?' late':'')+'"><input type="checkbox" class="ck-box" data-goal-done="'+esc(x.id)+'"'+(x.done?' checked':'')+dis+' aria-label="Atteint"><input class="inp ck-txt" id="gl-'+esc(x.id)+'" data-goal-text="'+esc(x.id)+'" value="'+esc(x.text)+'" aria-label="Objectif"'+dis+'>'+
+'<input class="inp goal-due" type="date" id="gd-'+esc(x.id)+'" data-goal-due="'+esc(x.id)+'" value="'+esc(x.due||'')+'" aria-label="Pour le"'+dis+'>'+(ro?'':'<button class="icon-btn sm" data-act="prj-goal-del" data-gid="'+esc(x.id)+'" aria-label="Retirer">'+ICON.x+'</button>')+'</div>'+
+(x.done&&x.doneAt?'<span class="hint goal-done">Atteint le '+fmtStamp(x.doneAt)+(x.doneBy?' par '+esc(x.doneBy):'')+'</span>':'');}).join('')+'</div>'+
+(ro?'':'<div class="link-line"><input class="inp" id="prj-goal-new" placeholder="Nouvel objectif (ex. Écrire 10 titres) · Entrée pour ajouter" autocomplete="off"><input class="inp goal-due" type="date" id="prj-goal-due" aria-label="Pour le (facultatif)"><button class="btn small" data-act="prj-goal-add">'+ICON.plus+'Ajouter</button></div>')+
+(p.goals.length||ro?'':'<div class="card-f"><span class="hint">Idées :</span>'+prjGoalIdeas(p).map(t=>'<button class="btn small ghost" data-act="prj-goal-quick" data-t="'+esc(t)+'">+ '+esc(t)+'</button>').join('')+'</div>')+'</div>';
+const linked=p.contentIds.map(id=>S.contents[id]).filter(Boolean);const free=contents().filter(c=>!p.contentIds.includes(c.id)).sort((a,b)=>titleOf(a).localeCompare(titleOf(b)));
+h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Contenus liés</h2><span class="mono muted">'+linked.length+'</span></div>'+
+(linked.length?'<div class="rows">'+linked.map(c=>{const s=statusOf(c.status);const np=nextPub(c);return'<div class="row"><button class="row-main" data-act="peek" data-id="'+esc(c.id)+'"><b>'+esc(titleOf(c))+'</b><span class="row-meta"><span class="pill" style="--c:'+s.c+'">'+s.label+'</span><span class="pill" style="--c:'+typeOf(c.type).color+'">'+esc(typeOf(c.type).label)+'</span>'+(np&&isValidDate(np.date)?'<span>'+(np.done?'Publié':'Publication')+' · '+fmtShort(np.date)+'</span>':'')+'</span></button>'+
+(ro?'':'<div class="row-acts"><button class="icon-btn sm" data-act="prj-unlink" data-cid="'+esc(c.id)+'" title="Retirer du projet" aria-label="Retirer du projet">'+ICON.x+'</button></div>')+'</div>';}).join('')+'</div>':'<p class="hint" style="margin:0">Aucun contenu lié. Tous les contenus n\'ont pas besoin d\'un projet : relie seulement ceux qui en font partie (clip, teaser, making-of…).</p>')+
+(ro||!free.length?'':'<label class="field"><span>Relier un contenu</span><select class="inp" id="prj-addc" data-prj-addc="1"><option value="">Choisir un contenu…</option>'+free.map(c=>'<option value="'+esc(c.id)+'">'+esc(titleOf(c))+' · '+esc(statusOf(c.status).label)+'</option>').join('')+'</select></label>')+'</div>';
+h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Références &amp; liens</h2></div>'+
+(p.links.length?'<div class="links">'+p.links.map(l=>{const i=linkInfo(l.url);return'<span class="link-chip"><a href="'+esc(normUrl(l.url))+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">↗ '+esc(i.ok?i.label:l.url)+'</a>'+(ro?'':'<button class="icon-btn sm" style="width:22px;height:22px;border:0;background:none" data-act="prj-link-del" data-lid="'+esc(l.id)+'" aria-label="Retirer le lien">'+ICON.x+'</button>')+'</span>';}).join('')+'</div>':'')+
+(ro?'':'<div class="link-line"><input class="inp" id="prj-link-new" placeholder="Moodboard, maquette, playlist de référence… (lien)" inputmode="url" autocapitalize="off" autocomplete="off"><button class="btn small" data-act="prj-link-add">'+ICON.plus+'Ajouter</button></div>')+'</div>';
+if(can('trips')){const tr=tripsAll().filter(t=>t.projectId===p.id).sort((a,b)=>a.start<b.start?-1:1);
+h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Déplacements liés</h2><button class="btn small" data-act="trip-new" data-project="'+esc(p.id)+'">'+ICON.plus+'Déplacement</button></div>'+(tr.length?'<div class="rows">'+tr.map(t=>tripRow(t,{showDate:true})).join('')+'</div>':'<p class="hint" style="margin:0">Aucun déplacement lié.</p>')+'</div>';}
+h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Notes</h2></div><textarea class="inp" id="pj-notes" data-pj="notes" rows="5" placeholder="Paroles en vrac, idées de featuring, budget estimé…"'+dis+'>'+esc(p.notes)+'</textarea></div>';
+const hist=S.history.filter(e=>e.kind==='project'&&e.refId===p.id).slice(0,8);
+if(hist.length)h+='<div class="ed-sec"><div class="ed-sec-h"><h2>Historique</h2></div><div class="hist">'+hist.map(histRow).join('')+'</div></div>';
+if(!isNew&&prjCanDelete(S.projects[p.id]))h+='<div class="ed-foot"><button class="btn danger" data-act="prj-del" data-id="'+esc(p.id)+'" data-confirm="Supprimer le projet ?">'+ICON.trash+'Supprimer le projet</button><span class="hint" style="align-self:center">Les contenus liés ne sont pas supprimés.</span></div>';
+h+='</div>';
+morph($('#prj-panel'),h);
+const nb=$('#prj-panel .sheet-body');if(nb)nb.scrollTop=st;if(fid){const el=document.getElementById(fid);if(el)el.focus({preventScroll:true});}
+}
+function prjGoalIdeas(p){
+if(p.universe==='musique'||p.type==='album'||p.type==='ep'||p.type==='single')return['Écrire les titres','Maquettes','Enregistrement studio','Mixage','Mastering','Pochette','Clip','Distribution en ligne','Plan de promo'];
+if(p.universe==='video')return['Scénario','Casting','Repérages','Tournage','Montage','Étalonnage et son','Bande-annonce','Diffusion'];
+return['Définir l\'idée','Budget','Équipe','Planning','Lancement'];}
+function prjUpdate(mut,log){if(!prjDraft||!can('projets'))return;mut(prjDraft);prjSchedule();renderPrj();}
+function addGoal(text,due){text=(text||'').trim();if(!text)return;prjUpdate(p=>{p.goals.push({id:'g'+uid(),text,done:false,due:isValidDate(due)?due:''});});}
+function deleteProject(id){const before=S.projects[id];if(!before)return;if(!prjCanDelete(before)){toast('Tu peux supprimer seulement les projets que tu as créés.');return;}
+clearTimeout(prjT);prjDraft=null;prjOrig=null;const m=$('#prjsheet');if(m)m.hidden=true;v61Unlock();
+Store.del('projects',id);tripsAll().filter(t=>t.projectId===id).forEach(t=>Store.save('trips',Object.assign(clone(t),{projectId:''})));
+logChange('project','delete',id,prjTitle(before),'Projet supprimé',before);
+toast('Projet supprimé',()=>{Store.save('projects',before);logChange('project','restore',id,prjTitle(before),'Suppression annulée',null);});}
+function projectsOf(cid){return projectsAll().filter(p=>(p.contentIds||[]).includes(cid));}
+function linkContentToProject(pid,cid,on){const p=S.projects[pid];if(!p||!can('projets'))return;const x=normPrj(clone(p));
+x.contentIds=x.contentIds.filter(id=>id!==cid);if(on)x.contentIds.push(cid);Store.save('projects',x);
+logChange('project','update',pid,prjTitle(x),(on?'Contenu relié : ':'Contenu retiré : ')+titleOf(S.contents[cid]),p);
+if(prjDraft&&prjDraft.id===pid){prjDraft.contentIds=x.contentIds.slice();prjOrig=clone(x);}}
+function prjChips(c,editable){const L=projectsOf(c.id);
+return L.map(p=>'<button class="pill prj-chip" style="--c:'+prjUniv(p).c+';border:0;cursor:pointer" data-act="prj-open" data-id="'+esc(p.id)+'">◆ '+esc(prjTitle(p))+' · '+prjProgress(p).pct+' %</button>').join('');}
+function prjEditorSection(c){
+if(!S.contents[c.id]||(!projectsAll().length&&!can('projets')))return'';const L=projectsOf(c.id);const free=projectsAll().filter(p=>!L.includes(p));
+return'<div class="ed-sec"><div class="ed-sec-h"><h2>Projet</h2></div>'+(L.length?'<div class="card-f">'+L.map(p=>'<span class="pill prj-chip" style="--c:'+prjUniv(p).c+'"><button class="prj-chip-b" data-act="prj-open" data-id="'+esc(p.id)+'">◆ '+esc(prjTitle(p))+'</button>'+(can('projets')?'<button class="prj-chip-x" data-act="prj-unlink-c" data-pid="'+esc(p.id)+'" data-cid="'+esc(c.id)+'" aria-label="Retirer de ce projet">×</button>':'')+'</span>').join('')+'</div>':'<p class="hint" style="margin:0">Ce contenu ne fait partie d\'aucun projet. C\'est très bien aussi.</p>')+
+(can('projets')&&free.length?'<select class="inp" id="ed-prj" data-ed-prj="'+esc(c.id)+'" style="max-width:360px"><option value="">Relier à un projet…</option>'+free.map(p=>'<option value="'+esc(p.id)+'">'+esc(prjTitle(p))+'</option>').join('')+'</select>':'')+'</div>';}
+function blkProjets(){
+const L=projectsAll().map(normPrj).filter(p=>PRJ_ACTIVE.includes(p.status));
+let h='<section class="panel"><div class="panel-h"><h2>Projets en cours</h2><button class="btn ghost small" data-nav="projets">Tout voir'+ICON.arrow+'</button></div>';
+if(!L.length)return h+'<div class="empty"><b>Aucun projet en cours</b>Crée un projet (album, clip, série…) pour suivre ses objectifs.'+(can('projets')?'<br><button class="btn primary" data-act="prj-new">Nouveau projet</button>':'')+'</div></section>';
+return h+'<div class="rows">'+L.slice(0,6).map(p=>{const r=prjRelease(p);const late=prjLateGoals(p).length;const g=prjProgress(p);
+return'<div class="row"><button class="row-main" data-act="prj-open" data-id="'+esc(p.id)+'"><b>'+esc(prjTitle(p))+'</b><span class="row-meta"><span class="pill" style="--c:'+prjUniv(p).c+'">'+esc(prjType(p))+'</span><span>'+(r?'Sortie '+esc(r.label):'Sortie à fixer')+'</span>'+(g.n?'<span class="mono">'+g.d+'/'+g.n+'</span>':'')+(late?'<span class="late-txt">'+plural(late,'objectif')+' en retard</span>':'')+'</span>'+
+'<span class="prog"><i style="width:'+g.pct+'%;--c:'+prjUniv(p).c+'"></i></span></button></div>';}).join('')+'</div></section>';}
+/* ================= 6.1 · Script : texte libre et fichiers ================= */
+const SCRIPT_TEXT_EXT=['txt','md','fountain','text'];
+const SCRIPT_ACCEPT='.txt,.md,.fountain,.docx,.pdf,.doc,.odt,.rtf,.pages';
+const fileExt=n=>(String(n||'').split('.').pop()||'').toLowerCase();
+const fmtSize=b=>b>=1048576?(b/1048576).toFixed(1).replace('.',',')+' Mo':Math.max(1,Math.round(b/1024))+' Ko';
+async function inflateRaw(bytes){
+if(typeof DecompressionStream==='undefined')throw new Error('Navigateur trop ancien pour lire les fichiers Word');
+const ds=new DecompressionStream('deflate-raw');const w=ds.writable.getWriter();w.write(bytes);w.close();
+return new Uint8Array(await new Response(ds.readable).arrayBuffer());}
+async function zipEntry(buf,name){
+const u8=new Uint8Array(buf);const dv=new DataView(buf);
+let e=-1;for(let i=u8.length-22;i>=Math.max(0,u8.length-66000);i--){if(dv.getUint32(i,true)===0x06054b50){e=i;break;}}
+if(e<0)throw new Error('Fichier Word illisible');
+const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const td=new TextDecoder();
+for(let k=0;k<n;k++){if(dv.getUint32(p,true)!==0x02014b50)break;
+const method=dv.getUint16(p+10,true),csize=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),off=dv.getUint32(p+42,true);
+const fname=td.decode(u8.subarray(p+46,p+46+nl));
+if(fname===name){const lnl=dv.getUint16(off+26,true),lxl=dv.getUint16(off+28,true);const start=off+30+lnl+lxl;const data=u8.subarray(start,start+csize);
+if(method===0)return data;if(method===8)return await inflateRaw(data);throw new Error('Compression non prise en charge');}
+p+=46+nl+xl+cl;}
+throw new Error('Texte introuvable dans ce fichier');}
+async function docxText(buf){
+const xml=new TextDecoder().decode(await zipEntry(buf,'word/document.xml'));
+const doc=new DOMParser().parseFromString(xml,'application/xml');const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const out=[];const ps=doc.getElementsByTagNameNS(W,'p');
+for(const p of ps){let s='';const walk=n=>{for(const c of n.childNodes){if(c.nodeType!==1)continue;const l=c.localName;
+if(l==='t')s+=c.textContent;else if(l==='tab')s+='\t';else if(l==='br'||l==='cr')s+='\n';else if(l!=='p')walk(c);}};walk(p);out.push(s);}
+return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();}
+async function odtText(buf){
+const xml=new TextDecoder().decode(await zipEntry(buf,'content.xml'));const doc=new DOMParser().parseFromString(xml,'application/xml');
+const out=[];const T='urn:oasis:names:tc:opendocument:xmlns:text:1.0';
+const ps=[...doc.getElementsByTagNameNS(T,'p'),...doc.getElementsByTagNameNS(T,'h')];
+ps.sort((a,b)=>a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING?-1:1);
+ps.forEach(p=>out.push(p.textContent));return out.join('\n').trim();}
+const FileStore={
+limit(){return S.mode==='local'?4*1048576:25*1048576;},
+async put(path,file){
+if(S.mode==='supa'){const r=await Supa.sb.storage.from('photos').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});if(r.error)throw r.error;return{store:'supa',ref:path};}
+if(S.mode==='cloud'){let as=null;try{as=await window.claude.use('assets');}catch(e){as=null;}if(as){const r=await as.upload(file);return{store:'asset',ref:r.url,aid:r.id};}}
+const dataUrl=await blobToDataUrl(file);const id=path.replace(/[^\w.-]/g,'_');
+if(S.mode==='local'&&Sync.cfg&&Sync.cfg.gistId){const name='fichier-'+id+'.txt';Sync.pendingFiles[name]=dataUrl;MediaStore.cache['g:'+name]=dataUrl;Sync.schedulePush();return{store:'gist',ref:name};}
+await idbPut(id,dataUrl);MediaStore.cache['i:'+id]=dataUrl;return{store:'idb',ref:id};}
+};
+function scriptWords(t){const w=String(t||'').trim().split(/\s+/).filter(Boolean).length;return w;}
+function scriptSection(c){
+const mode=c.scriptMode==='free'?'free':'scenes';const files=c.scriptFiles||[];
+let h='<div class="ed-sec" id="ed-script"><div class="ed-sec-h"><h2>Script</h2><div class="row-acts">'+
+'<div class="seg sm" role="group" aria-label="Façon d\'écrire"><button type="button" data-act="ed-script-mode" data-v="scenes" aria-pressed="'+(mode==='scenes')+'">Par scènes</button><button type="button" data-act="ed-script-mode" data-v="free" aria-pressed="'+(mode==='free')+'">Texte libre</button></div>'+
+'<button class="btn small" data-act="ed-script-import" title="Texte, Word, PDF…">'+ICON.plus+'Importer</button>'+(mode==='scenes'?'<button class="btn small" data-act="ed-addscene">'+ICON.plus+'Scène</button>':'')+'</div></div>';
+if(mode==='free'){const w=scriptWords(c.scriptText);
+h+='<textarea class="inp script-free" id="ed-script-text" data-f="scriptText" placeholder="Écris ici ton scénario, librement.\n\nINT. STUDIO – JOUR\n\nTefi entre, regarde la caméra.\n\nTEFI\nSalut tout le monde !">'+esc(c.scriptText||'')+'</textarea>'+
+'<span class="hint" id="ed-script-count">'+(w?plural(w,'mot')+' · environ '+Math.max(1,Math.round(w/130))+' min à l\'oral':'Texte vide')+'</span>';}
+else h+=c.scenes.map((s,i)=>'<div class="scene"><div class="scene-h"><input id="sh-'+esc(s.id)+'" data-sf="heading" data-sid="'+esc(s.id)+'" value="'+esc(s.heading)+'" aria-label="Titre de la scène '+(i+1)+'" placeholder="Scène '+(i+1)+' · lieu, moment">'+
+(c.scenes.length>1?'<button class="icon-btn sm" data-act="ed-delscene" data-sid="'+esc(s.id)+'" data-confirm="✓" aria-label="Supprimer la scène">'+ICON.x+'</button>':'')+'</div>'+
+'<textarea id="sb-'+esc(s.id)+'" data-sf="body" data-sid="'+esc(s.id)+'" placeholder="Action, dialogues, plans…\n\nTEFI\nSalut tout le monde !">'+esc(s.body)+'</textarea></div>').join('');
+if(files.length)h+='<div class="sfiles">'+files.map(f=>{const u=MediaStore.url(f.file);
+return'<div class="sfile"><span class="sfile-ic">'+esc(fileExt(f.name).toUpperCase().slice(0,4)||'FIC')+'</span><div class="sfile-m"><b>'+esc(f.name)+'</b><span class="hint">'+esc(fmtSize(f.size||0))+(f.by?' · '+esc(f.by):'')+(f.at?' · '+fmtStamp(f.at):'')+'</span></div>'+
+(u?'<a class="btn small" href="'+esc(u)+'" target="_blank" rel="noopener" download="'+esc(f.name)+'">Ouvrir</a>':'<span class="hint">Chargement…</span>')+
+'<button class="icon-btn sm" data-act="ed-script-file-del" data-fid="'+esc(f.id)+'" data-confirm="✓" aria-label="Retirer le fichier">'+ICON.x+'</button></div>';}).join('')+'</div>';
+h+='<p class="hint" style="margin:0">Importer : un fichier texte ou Word est recopié dans « Texte libre » pour être modifié ici. Un PDF (ou autre) est joint au contenu pour être ouvert et téléchargé.</p></div>';
+return h;
+}
+function scriptScenesText(c){return(c.scenes||[]).filter(s=>s.body.trim()||s.heading.trim()).map(s=>(s.heading||'').toUpperCase()+'\n'+s.body).join('\n\n').trim();}
+let scriptPick=null;
+function pickScriptFile(){
+if(!draft)return;let inp=$('#script-file');
+if(!inp){inp=document.createElement('input');inp.type='file';inp.id='script-file';inp.accept=SCRIPT_ACCEPT;inp.hidden=true;document.body.appendChild(inp);
+inp.addEventListener('change',()=>{const f=inp.files&&inp.files[0];inp.value='';if(f&&draft)importScriptFile(f);});}
+inp.click();}
+async function importScriptFile(file){
+const cid=draft.id;const ext=fileExt(file.name);let text=null;
+try{
+if(SCRIPT_TEXT_EXT.includes(ext)||(file.type||'').startsWith('text/'))text=await file.text();
+else if(ext==='docx')text=await docxText(await file.arrayBuffer());
+else if(ext==='odt')text=await odtText(await file.arrayBuffer());
+}catch(e){toast('Lecture impossible : '+(e.message||'fichier illisible')+'. Le fichier sera seulement joint.');text=null;}
+if(!draft||draft.id!==cid){toast('Fiche fermée : import annulé.');return;}
+if(text!=null&&text.trim()){
+const cur=(draft.scriptText||'').trim();
+if(cur&&!confirm('Le texte libre contient déjà un script.\n\nOK : remplacer par « '+file.name+' »\nAnnuler : ajouter à la suite'))draft.scriptText=cur+'\n\n'+text.trim();
+else draft.scriptText=text.trim();
+draft.scriptMode='free';scheduleSave();renderEditor();toast('Script importé dans « Texte libre » : '+plural(scriptWords(draft.scriptText),'mot'));
+if(SCRIPT_TEXT_EXT.includes(ext))return;}
+if(file.size>FileStore.limit()){toast('Fichier trop lourd ('+fmtSize(file.size)+'). Maximum : '+fmtSize(FileStore.limit())+'.');return;}
+toast('Envoi de « '+file.name+' »…');
+try{const fid='f'+uid();const ref=await FileStore.put('scripts/'+cid+'/'+fid+'.'+(ext||'bin'),file);
+const entry={id:fid,name:file.name,size:file.size,type:file.type||'',file:ref,at:Date.now(),by:roleName(ROLE)};
+if(draft&&draft.id===cid){draft.scriptFiles=(draft.scriptFiles||[]).concat([entry]);scheduleSave();renderEditor();}
+else updateContent(cid,c=>{c.scriptFiles=(c.scriptFiles||[]).concat([entry]);},'Fichier de script joint : '+file.name);
+toast('Fichier joint : '+file.name);}
+catch(e){toast('Envoi impossible : '+errMsg(e));}
+}
+function scriptPeekHtml(c){
+const files=c.scriptFiles||[];const txt=c.scriptMode==='free'?(c.scriptText||'').trim():scriptScenesText(c);
+let h='';if(txt)h+='<pre class="script-ex">'+esc(txt.length>900?txt.slice(0,900)+'…':txt)+'</pre>';
+if(files.length)h+='<div class="card-f">'+files.map(f=>{const u=MediaStore.url(f.file);return u?'<a class="link-chip" href="'+esc(u)+'" target="_blank" rel="noopener" download="'+esc(f.name)+'">📄 '+esc(f.name)+'</a>':'<span class="link-chip">📄 '+esc(f.name)+'</span>';}).join('')+'</div>';
+return h?'<div class="ed-sec"><div class="ed-sec-h"><h3>Script</h3></div>'+h+'</div>':'';}
+/* ================= 6.1 · Branchements (calendrier, résumé, À traiter, recherche) ================= */
+function v61Events(opt,out){
+if(opt.filtered&&filtersActive())return;const t=today();
+const push=(x,start,end,mk)=>{if(!isValidDate(start))return;const n=Math.min(diffDays(end,start)+1,120);
+if(opt.collapse){const d=start<t&&end>=t?t:start;out.push(mk(d,0,n));return;}
+for(let i=0;i<n;i++)out.push(mk(addDays(start,i),i,n));};
+if(can('trips')&&(opt.allExtra||S.ui.showTrips!==false))tripsAll().forEach(x=>push(x,x.start,tripEnd(x),(d,i,n)=>({kind:'trip',date:d,time:i===0?(x.startTime||''):'',x,di:i,dn:n})));
+if(opt.allExtra||S.ui.showOff!==false)offsAll().forEach(x=>{if(x.status==='refused')return;push(x,x.start,offEnd(x),(d,i,n)=>({kind:'off',date:d,time:'',o:x,di:i,dn:n}));});
+}
+function tripChip(e){const x=e.x;
+return'<button class="ev trip" style="--c:'+tripColor(x)+'" data-act="trip-open" data-id="'+esc(x.id)+'" title="'+esc('Déplacement · '+tripCat(x)+' · '+tripTitle(x)+(x.destination?' · '+x.destination:''))+'"><span class="t">✈'+(e.dn>1?' '+(e.di+1)+'/'+e.dn:'')+'</span><span class="n">'+esc(tripTitle(x))+'</span></button>';}
+function offChip(e){const x=e.o;const per=offPeriodLabel(x);
+return'<button class="ev off'+(x.status==='pending'?' pending':'')+'" data-act="off-open" data-id="'+esc(x.id)+'" title="'+esc(offWho(x)+' indisponible'+(per?' ('+per+')':'')+(x.status==='pending'?' · demande en attente':''))+'"><span class="t">⦸</span><span class="n">'+esc(offWho(x))+' indispo'+(per?' · '+per:'')+(x.status==='pending'?' ?':'')+'</span></button>';}
+{const _chip=evChip;evChip=function(e){return e.kind==='trip'?tripChip(e):e.kind==='off'?offChip(e):_chip(e);};}
+{const _row=evRow;evRow=function(e,o){return e.kind==='trip'?tripRow(e.x,o):e.kind==='off'?offRow(e.o,o):_row(e,o);};}
+{const _col=evColor;evColor=function(e){return e.kind==='trip'?tripColor(e.x):e.kind==='off'?'#5D6472':_col(e);};}
+function v61CalToggles(){return(can('trips')?'<label class="toggle"><input type="checkbox" id="show-trips" data-act-change="toggle-trips"'+(S.ui.showTrips!==false?' checked':'')+'>Déplacements</label>':'')+
+'<label class="toggle"><input type="checkbox" id="show-off" data-act-change="toggle-off"'+(S.ui.showOff!==false?' checked':'')+'>Indisponibilités</label>';}
+function v61DayBtns(d){return'<button class="btn small" data-act="off-new" data-date="'+esc(d)+'">'+ICON.plus+'Indispo</button>'+(can('trips')?'<button class="btn small" data-act="trip-new" data-date="'+esc(d)+'">'+ICON.plus+'Déplacement</button>':'');}
+function blkAway(){
+const t=today(),end=addDays(t,30);
+const L=offsAll().filter(x=>x.status!=='refused'&&isValidDate(x.start)&&offEnd(x)>=t&&x.start<=end).map(x=>['off',x.start<t?t:x.start,x])
+.concat(can('trips')?tripsAll().filter(x=>isValidDate(x.start)&&tripEnd(x)>=t&&x.start<=end).map(x=>['trip',x.start<t?t:x.start,x]):[]).sort((a,b)=>a[1]<b[1]?-1:a[1]>b[1]?1:0);
+let h='<section class="panel"><div class="panel-h"><h2>Absences et déplacements</h2><div class="row-acts"><span class="hint">30 jours</span><button class="btn small" data-act="off-new">'+ICON.plus+'Indispo</button>'+(can('trips')?'<button class="btn small" data-act="trip-new">'+ICON.plus+'Déplacement</button>':'')+'</div></div>';
+if(!L.length)return h+'<p class="muted" style="margin:0">Personne n\'est absent ni en déplacement ces 30 prochains jours.</p></section>';
+return h+'<div class="rows">'+L.slice(0,8).map(r=>r[0]==='off'?offRow(r[2],{showDate:true}):tripRow(r[2],{showDate:true,showRel:true})).join('')+'</div></section>';}
+HOME_BLOCKS.projets={label:'Projets en cours',roles:['admin','assistant']};
+HOME_BLOCKS.away={label:'Absences et déplacements',roles:['admin','assistant']};
+['admin','assistant'].forEach(r=>{const L=HOME_DEFAULT[r];const i=L.indexOf('rdvmonth');L.splice(i<0?L.length:i+1,0,'away','projets');});
+KIND_LABEL.trip='Déplacement';KIND_LABEL.off='Indisponibilité';KIND_LABEL.project='Projet';
+HIST_COL.trip='trips';HIST_COL.off='unavail';HIST_COL.project='projects';
+VIEWS.projets=viewProjets;
+{const _inbox=inboxItems;inboxItems=function(){const it=_inbox();if(!isAdmin())return it;const ua=roleName('assistant');
+offsAll().filter(x=>x.who==='assistant'&&x.status==='pending').forEach(x=>{const per=offPeriodLabel(x);it.push({key:'off:'+x.id+':'+(x.updatedAt||0),kind:'off',id:x.id,label:ua+' demande une indisponibilité',sub:fmtRange(x.start,offEnd(x))+(per?' ('+per+')':'')+(offReasonText(x)?' · '+offReasonText(x):''),prio:'p3',at:x.createdAt||0});});
+return it.sort((a,b)=>(prioRank(b.prio)-prioRank(a.prio))||((b.at||0)-(a.at||0)));};}
+{const _treat=treatItem;treatItem=function(kind,id){if(kind==='off'){closeInbox();openOff(id);return;}return _treat(kind,id);};}
+{const _news=asstNews;asstNews=function(){const L=_news();if(ROLE!=='assistant')return L;const seen=lsGet('studio-tefi-seen-off')||{};
+offsAll().filter(x=>x.who==='assistant'&&x.createdBy==='assistant'&&x.decision&&x.status!=='pending'&&seen[x.id]!==x.decision.at&&Date.now()-x.decision.at<30*864e5)
+.forEach(x=>L.push({kind:'offnews',id:x.id,label:(x.status==='refused'?'Tefi a refusé':'Tefi a validé')+' ton indisponibilité',sub:fmtRange(x.start,offEnd(x))+(x.decision.comment?' · « '+x.decision.comment+' »':'')}));return L;};}
+{const _ed=editorExtras;editorExtras=function(c){return prjEditorSection(c)+_ed(c);};}
+{const _pk=peekExtras;peekExtras=function(c){const ch=prjChips(c);return(ch?'<div class="ed-sec"><div class="ed-sec-h"><h3>Projet</h3></div><div class="card-f">'+ch+'</div></div>':'')+_pk(c);};}
+{const _rs=restore;restore=function(hid){const e0=S.history.find(x=>x.id===hid);if(!e0||!['trip','off','project'].includes(e0.kind))return _rs(hid);
+let e=e0;if(!e.before)return;if(e.before.__patch){const B=histUnpatch(e);if(!B){toast('Cet élément n\'existe plus : restaure d\'abord sa suppression.');return;}e=Object.assign({},e,{before:B});}
+const col=HIST_COL[e.kind];const cur=S[col][e.refId]||null;Store.save(col,e.before);
+if(e.kind==='project'&&prjDraft&&prjDraft.id===e.refId){clearTimeout(prjT);prjDraft=normPrj(clone(e.before));prjOrig=clone(e.before);renderPrj();}
+logChange(e.kind,'restore',e.refId,e.label||KIND_LABEL[e.kind],'Retour à la version du '+fmtStamp(e.at),cur);toast('Version restaurée');};}
+{const _render=render;render=function(){_render();if(!ROLE)return;
+const c=$('#cnt-prj');if(c){const n=projectsAll().reduce((s,p)=>s+(PRJ_ACTIVE.includes(p.status)?prjLateGoals(p).length:0),0);c.textContent=n||'';}
+const keep=id=>{const m=$('#'+id);return m&&!m.hidden&&!m.contains(document.activeElement);};
+if(offDraft&&keep('offm')){const cur=S.unavail[offDraft.id];if(cur&&!canEditOff(cur))offDraft=clone(cur);renderOff();}
+if(tripDraft&&keep('tripm'))renderTrip();
+if(prjDraft&&keep('prjsheet'))renderPrj();};}
+
+/* ================= 6.1 · Clics, saisies ================= */
+function handleV61Click(a,el,e){
+const id=el.dataset.id,v=el.dataset.v;
+switch(a){
+case'trip-new':if(!can('trips')){toast(DENIED);return true;}openTrip(null,{date:el.dataset.date,project:el.dataset.project});return true;
+case'trip-open':if(e)e.stopPropagation();openTrip(id);return true;
+case'trip-close':closeTrip();return true;
+case'trip-save':if(!can('trips')){toast(DENIED);return true;}saveTrip();return true;
+case'trip-del':if(e)e.stopPropagation();if(!can('trips')){toast(DENIED);return true;}deleteTrip(id);return true;
+case'trip-nature':if(tripDraft&&can('trips')){tripDraft.nature=v;if(v==='pro'&&!tripDraft.domain)tripDraft.domain='video';renderTrip();}return true;
+case'trip-domain':if(tripDraft&&can('trips')){tripDraft.domain=v;renderTrip();}return true;
+case'trip-funding':if(tripDraft&&can('trips')){tripDraft.funding=v;renderTrip();}return true;
+case'trip-filter':S.ui.tripFilter=v;saveUI();render();return true;
+case'off-new':openOff(null,{date:el.dataset.date});return true;
+case'off-open':if(e)e.stopPropagation();openOff(id);return true;
+case'off-close':closeOff();return true;
+case'off-save':saveOff();return true;
+case'off-del':if(e)e.stopPropagation();deleteOff(id);return true;
+case'off-decide':decideOff(el.dataset.ok==='1');return true;
+case'off-who':if(offDraft&&isAdmin()){offDraft.who=v;offDraft.persoReason=false;renderOff();}return true;
+case'off-period':if(offDraft){offDraft.period=v;renderOff();}return true;
+case'prj-new':openPrj(null);return true;
+case'prj-open':if(e)e.stopPropagation();if(draft)closeEditor();openPrj(id);return true;
+case'prj-close':closePrj();return true;
+case'prj-filter':S.ui.prjFilter=v;saveUI();render();return true;
+case'prj-univ':S.ui.prjUniv=v;saveUI();render();return true;
+case'prj-status':prjUpdate(p=>{p.status=v;});return true;
+case'prj-rmode':prjUpdate(p=>{p.releaseMode=v;});return true;
+case'prj-goal-add':{const i=$('#prj-goal-new'),d=$('#prj-goal-due');addGoal(i&&i.value,d&&d.value);setTimeout(()=>{const n=$('#prj-goal-new');if(n){n.value='';n.focus();}const dd=$('#prj-goal-due');if(dd)dd.value='';},0);return true;}
+case'prj-goal-quick':addGoal(el.dataset.t,'');return true;
+case'prj-goal-del':prjUpdate(p=>{p.goals=p.goals.filter(g=>g.id!==el.dataset.gid);});return true;
+case'prj-unlink':if(prjDraft&&can('projets')){const cid=el.dataset.cid;prjUpdate(p=>{p.contentIds=p.contentIds.filter(x=>x!==cid);});}return true;
+case'prj-unlink-c':linkContentToProject(el.dataset.pid,el.dataset.cid,false);if(draft)renderEditor();return true;
+case'prj-link-add':{const i=$('#prj-link-new');const u=i&&i.value.trim();if(!u)return true;prjUpdate(p=>{p.links.push({id:'l'+uid(),url:u});});setTimeout(()=>{const n=$('#prj-link-new');if(n)n.value='';},0);return true;}
+case'prj-link-del':prjUpdate(p=>{p.links=p.links.filter(l=>l.id!==el.dataset.lid);});return true;
+case'prj-del':deleteProject(id);return true;
+case'ed-script-mode':if(!draft)return true;if(!can('projEdit')){toast(DENIED);return true;}
+if(v==='free'&&!(draft.scriptText||'').trim()){const s=scriptScenesText(draft);if(s)draft.scriptText=s;}
+draft.scriptMode=v;scheduleSave();renderEditor();if(v==='free')setTimeout(()=>{const t=$('#ed-script-text');if(t)t.focus({preventScroll:true});},0);return true;
+case'ed-script-import':if(!can('projEdit')){toast(DENIED);return true;}pickScriptFile();return true;
+case'ed-script-file-del':if(!draft||!can('projEdit'))return true;draft.scriptFiles=(draft.scriptFiles||[]).filter(f=>f.id!==el.dataset.fid);scheduleSave();renderEditor();toast('Fichier retiré du contenu');return true;
+}
+return false;
+}
+document.addEventListener('input',e=>{
+const el=e.target;if(!el||!el.dataset)return;
+if(el.dataset.tf&&tripDraft){tripDraft[el.dataset.tf]=el.value;return;}
+if(el.dataset.tb&&tripDraft){tripDraft.budget=Object.assign({},tripDraft.budget||{},{[el.dataset.tb]:el.value});const t=$('#tf-total');if(t)t.textContent='Total : '+money(tripBudget(tripDraft),tripDraft.currency||'MGA');return;}
+if(el.dataset.of&&offDraft){offDraft[el.dataset.of]=el.value;return;}
+if(el.dataset.pj&&prjDraft&&can('projets')){prjDraft[el.dataset.pj]=el.value;prjSchedule();return;}
+if(el.dataset.goalText&&prjDraft&&can('projets')){const g=prjDraft.goals.find(x=>x.id===el.dataset.goalText);if(g){g.text=el.value;prjSchedule();}return;}
+if(el.id==='ed-script-text'){const n=$('#ed-script-count');const w=scriptWords(el.value);if(n)n.textContent=w?plural(w,'mot')+' · environ '+Math.max(1,Math.round(w/130))+' min à l\'oral':'Texte vide';}
+});
+document.addEventListener('change',e=>{
+const el=e.target;if(!el||!el.dataset)return;
+if(el.dataset.actChange==='toggle-trips'){S.ui.showTrips=el.checked;saveUI();render();return;}
+if(el.dataset.actChange==='toggle-off'){S.ui.showOff=el.checked;saveUI();render();return;}
+if(el.dataset.tf&&tripDraft){tripDraft[el.dataset.tf]=el.value;if(['start','end','currency'].includes(el.dataset.tf))renderTrip();return;}
+if(el.dataset.ofPerso&&offDraft){offDraft.persoReason=el.checked;renderOff();return;}
+if(el.dataset.of&&offDraft){offDraft[el.dataset.of]=el.value;if(el.dataset.of!=='reason')renderOff();return;}
+if(el.dataset.pj&&prjDraft){if(!can('projets'))return;prjDraft[el.dataset.pj]=el.value;prjSchedule();if(['type','universe','releaseDate'].includes(el.dataset.pj))renderPrj();return;}
+if(el.dataset.prjm&&prjDraft&&can('projets')){const k=el.dataset.prjm;const cur=/^\d{4}-\d{2}$/.test(prjDraft[k]||'')?prjDraft[k].split('-'):[String(pd(today()).getFullYear()),''];
+const m=el.dataset.part==='m'?el.value:cur[1],y=el.dataset.part==='y'?el.value:cur[0];prjDraft[k]=m&&y?y+'-'+m:(m||y?(y||cur[0])+'-'+(m||'01'):'');
+if(!m&&!y)prjDraft[k]='';prjSchedule();renderPrj();return;}
+if(el.dataset.goalDone&&prjDraft){if(!can('projets')){renderPrj();return;}const g=prjDraft.goals.find(x=>x.id===el.dataset.goalDone);if(g){g.done=el.checked;g.doneAt=el.checked?Date.now():null;g.doneBy=el.checked?(ROLE==='assistant'?roleName('assistant'):'Tefi'):'';prjSchedule();renderPrj();
+if(el.checked){const p=prjProgress(prjDraft);toast(p.n&&p.d===p.n?'Tous les objectifs sont atteints 🎉':'Objectif atteint · '+p.pct+' %');}}return;}
+if(el.dataset.goalDue&&prjDraft&&can('projets')){const g=prjDraft.goals.find(x=>x.id===el.dataset.goalDue);if(g){g.due=el.value;prjSchedule();renderPrj();}return;}
+if(el.dataset.prjAddc&&prjDraft&&can('projets')){const cid=el.value;if(cid&&!prjDraft.contentIds.includes(cid)){prjDraft.contentIds.push(cid);prjSchedule();renderPrj();toast('Contenu relié au projet');}return;}
+if(el.dataset.edPrj){const pid=el.value;if(pid){linkContentToProject(pid,el.dataset.edPrj,true);toast('Contenu relié à « '+prjTitle(S.projects[pid])+' »');if(draft)renderEditor();}return;}
+if(el.dataset.offMax&&isAdmin()){const n=Math.max(1,Math.min(52,parseInt(el.value,10)||4));updateSettings(s=>{s.offPersoMax=n;},'Repère de raisons perso : '+n+' sur 12 mois');return;}
+});
+document.addEventListener('keydown',e=>{
+if(e.key==='Enter'&&e.target&&e.target.id==='prj-goal-new'){e.preventDefault();const d=$('#prj-goal-due');addGoal(e.target.value,d&&d.value);setTimeout(()=>{const n=$('#prj-goal-new');if(n){n.value='';n.focus();}},0);return;}
+if(e.key==='Enter'&&e.target&&e.target.id==='prj-link-new'){e.preventDefault();const u=e.target.value.trim();if(u)prjUpdate(p=>{p.links.push({id:'l'+uid(),url:u});});setTimeout(()=>{const n=$('#prj-link-new');if(n){n.value='';n.focus();}},0);return;}
+});
+document.addEventListener('keydown',e=>{
+if(e.key!=='Escape')return;
+const open=id=>{const m=$('#'+id);return m&&!m.hidden;};
+if(open('offm')){closeOff();e.stopPropagation();return;}
+if(open('tripm')){closeTrip();e.stopPropagation();return;}
+if(open('prjsheet')&&!draft&&!document.querySelector('.peek:not([hidden])')){closePrj();e.stopPropagation();}
+},true);
+
 function arm(btn){
 if(btn.dataset.armed==='1')return true;
 btn.dataset.armed='1';btn.dataset.orig=btn.innerHTML;btn.textContent=btn.dataset.confirm;
@@ -3328,6 +3880,7 @@ const el=e.target.closest('[data-act]');if(!el)return;
 if(el.dataset.confirm&&!arm(el)){e.stopPropagation();e.preventDefault();return;}
 const a=el.dataset.act,id=el.dataset.id;
 if(a==='go-client'){S.ui.bizTab='comp';go('business');return;}
+if(handleV61Click(a,el,e))return;
 if(handleM5Click(a,el,e))return;
 if(handleM4Click(a,el))return;
 if(handleProjClick(a,el))return;
