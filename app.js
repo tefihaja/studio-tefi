@@ -39,8 +39,9 @@ function touch(){DV++;}
 function memo(key,fn){const e=MEMO.get(key);if(e&&e.dv===DV)return e.v;const v=fn();if(MEMO.size>300)MEMO.clear();MEMO.set(key,{dv:DV,v});return v;}
 let renderHidden=false;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&renderHidden){renderHidden=false;scheduleRender();}});
-const APP_VERSION='6.1';
+const APP_VERSION='6.2';
 const VERSIONS=[
+{v:'6.2',date:'2026-10-17',items:['Agenda sur ton téléphone : un lien d\'abonnement secret pour l\'iPhone et Google Agenda, mis à jour automatiquement (Réglages)']},
 {v:'6.1',date:'2026-10-17',items:['Déplacements dans le calendrier : perso ou pro (production vidéo ou musique), budget ou prise en charge pour le pro, et onglet Déplacements dans Business','Indisponibilités : Tefi les inscrit directement, l\'assistante fait une demande que Tefi valide ou refuse avec une justification (option « Raison perso » avec repère anti-abus)','Nouvel onglet Projets : type, univers, sortie visée (date ou période), objectifs à cocher avec barre d\'avancement, contenus et déplacements liés, « Créé par »','Script : écriture en texte libre et import de fichiers (texte et Word recopiés, PDF joint)','Projection devient Validation ; blocs « Projets en cours » et « Absences et déplacements » dans le résumé']},
 {v:'6.0.2',date:'2026-10-17',items:['Page d\'accueil : vidéo de bienvenue pour l\'assistante']},
 {v:'6.0.1',date:'2026-10-16',items:['Correction (comptes en ligne) : les actions de l\'assistante ne sont plus refusées à cause de l\'historique']},
@@ -565,7 +566,7 @@ else title=MONTHS[cd.getMonth()]+' '+cd.getFullYear();
 let h='<div class="wrap"><div class="head"><div><span class="label">Calendrier</span><h1>Planning de diffusion</h1></div><button class="btn primary" data-act="new" data-date="'+esc(u.selDay)+'">'+ICON.plus+'Planifier</button></div>';
 h+='<div class="cal-bar"><div class="cal-nav"><button class="icon-btn" data-act="cal-prev" aria-label="Précédent">'+ICON.left+'</button><button class="icon-btn" data-act="cal-next" aria-label="Suivant">'+ICON.right+'</button><span class="cal-title">'+esc(title)+'</span><button class="btn small" data-act="cal-today">Aujourd\'hui</button></div>'+
 '<div class="seg" role="group" aria-label="Vue">'+[['month','Mois'],['week','Semaine'],['list','Liste']].map(m=>'<button data-act="cal-mode" data-mode="'+m[0]+'" aria-pressed="'+(u.calMode===m[0])+'">'+m[1]+'</button>').join('')+'</div></div>';
-h+=filterBar('<label class="toggle"><input type="checkbox" id="show-prod" data-act-change="toggle-prod"'+(u.showProd?' checked':'')+'>Tournage &amp; montage</label><label class="toggle"><input type="checkbox" id="show-rdv" data-act-change="toggle-rdv"'+(u.showRdv?' checked':'')+'>Rendez-vous</label>'+v61CalToggles()+(u.showRdv&&can('rdv')?'<select class="inp sm-sel" id="f-rprio" aria-label="Priorité des rendez-vous"><option value="">Toutes priorités</option>'+PRIOS.slice(0,3).map(p=>'<option value="'+p.id+'"'+(u.rdvPrio===p.id?' selected':'')+'>'+(p.id==='p4'?'Impératifs':p.rdv+' et plus')+'</option>').join('')+'</select>':'')+'<button class="btn small" data-act="ics" title="Fichier .ics pour Google Agenda ou l\'agenda de l\'iPhone">Exporter vers mon agenda</button>');
+h+=filterBar('<label class="toggle"><input type="checkbox" id="show-prod" data-act-change="toggle-prod"'+(u.showProd?' checked':'')+'>Tournage &amp; montage</label><label class="toggle"><input type="checkbox" id="show-rdv" data-act-change="toggle-rdv"'+(u.showRdv?' checked':'')+'>Rendez-vous</label>'+v61CalToggles()+(u.showRdv&&can('rdv')?'<select class="inp sm-sel" id="f-rprio" aria-label="Priorité des rendez-vous"><option value="">Toutes priorités</option>'+PRIOS.slice(0,3).map(p=>'<option value="'+p.id+'"'+(u.rdvPrio===p.id?' selected':'')+'>'+(p.id==='p4'?'Impératifs':p.rdv+' et plus')+'</option>').join('')+'</select>':'')+(S.mode==='supa'&&isAdmin()?'<button class="btn small primary" data-act="ag-goto" title="Abonner ton iPhone ou Google Agenda">iPhone / Google Agenda</button>':'')+'<button class="btn small" data-act="ics" title="Fichier .ics pour Google Agenda ou l\'agenda de l\'iPhone">Exporter vers mon agenda</button>');
 const evs=events({extra:true});const bd=byDate(evs);
 if(u.calMode==='month'){
 const first=new Date(cd.getFullYear(),cd.getMonth(),1);const start=weekStart(ds(first));
@@ -763,6 +764,7 @@ h+='<section class="panel"><div class="panel-h"><h2>Thématiques</h2><span class
 st.themes.map(t=>'<div class="set-item"><input class="inp" id="th-'+esc(t.id)+'" value="'+esc(t.label)+'" data-theme-label="'+esc(t.id)+'" aria-label="Nom de la thématique"><button class="icon-btn sm danger" data-act="theme-del" data-id="'+esc(t.id)+'" data-confirm="✓" aria-label="Supprimer '+esc(t.label)+'">'+ICON.x+'</button></div>').join('')+
 '</div><form class="add-form" data-form="theme"><input class="inp" id="theme-new" placeholder="Nouvelle thématique (ex. Gaming)" autocomplete="off"><button class="btn" type="submit">'+ICON.plus+'Ajouter</button></form></section>';
 h+='</div>';
+h+=agendaPanel();
 h+=uiThemePanel();
 h+=signaturePanel();
 h+='<section class="panel"><div class="panel-h"><h2>Plan de travail de '+esc(roleName('assistant'))+'</h2></div><label class="perm"><span>Afficher son plan de travail dans ma vue (sauf ses tâches privées)</span><input type="checkbox" class="switch" id="plan-show-sw" data-plan-sw="1"'+(settings().showAssistPlan?' checked':'')+'></label></section>';
@@ -3866,6 +3868,58 @@ if(open('offm')){closeOff();e.stopPropagation();return;}
 if(open('tripm')){closeTrip();e.stopPropagation();return;}
 if(open('prjsheet')&&!draft&&!document.querySelector('.peek:not([hidden])')){closePrj();e.stopPropagation();}
 },true);
+
+/* ================= 6.2 · Agenda sur ton téléphone (lien d'abonnement) ================= */
+const AG={token:null,loaded:false,busy:false,test:null,err:''};
+const agendaUrl=t=>String((SUPA_CFG&&SUPA_CFG.url)||'').replace(/\/$/,'')+'/functions/v1/agenda?token='+t;
+const agendaWebcal=t=>agendaUrl(t).replace(/^https?:\/\//,'webcal://');
+async function agendaLoad(){
+if(S.mode!=='supa'||!isAdmin()||AG.busy)return;AG.busy=true;
+try{const r=await Supa.sb.rpc('agenda_link_get',{p_role:'admin'});if(r.error)throw r.error;AG.token=r.data||null;AG.err='';}
+catch(e){AG.err=/agenda_link_get|function|schema/i.test(errMsg(e))?'Relance d\'abord le script supabase-setup.sql (version 6.2) dans Supabase.':errMsg(e);}
+AG.loaded=true;AG.busy=false;scheduleRender();}
+async function agendaReset(){
+if(S.mode!=='supa'||!isAdmin()||AG.busy)return;AG.busy=true;render();
+try{const r=await Supa.sb.rpc('agenda_link_reset',{p_role:'admin'});if(r.error)throw r.error;const had=!!AG.token;AG.token=r.data;AG.test=null;AG.err='';
+logChange('settings','update','agenda','Lien agenda',had?'Lien d\'agenda remplacé':'Lien d\'agenda créé',null);
+toast(had?'Nouveau lien créé : l\'ancien ne marche plus, abonne-toi avec le nouveau.':'Lien d\'agenda créé');}
+catch(e){AG.err=/agenda_link_reset|function|schema/i.test(errMsg(e))?'Relance d\'abord le script supabase-setup.sql (version 6.2) dans Supabase.':errMsg(e);toast('Création impossible');}
+AG.busy=false;render();}
+async function agendaTest(){
+if(!AG.token)return;AG.test={busy:true};render();
+try{const r=await fetch(agendaUrl(AG.token),{cache:'no-store'});const t=await r.text();
+if(r.ok&&t.includes('BEGIN:VCALENDAR'))AG.test={ok:true,msg:'Le lien marche : '+plural((t.match(/BEGIN:VEVENT/g)||[]).length,'événement')+' envoyé'+((t.match(/BEGIN:VEVENT/g)||[]).length>1?'s':'')+' à ton agenda.'};
+else if(r.status===401)AG.test={ok:false,msg:'La fonction demande une connexion : dans Supabase → Edge Functions → agenda, désactive « Verify JWT », puis reteste.'};
+else if(r.status===404&&/not found|NOT_FOUND/i.test(t)&&!/Lien d/.test(t))AG.test={ok:false,msg:'La fonction « agenda » n\'est pas encore déployée dans Supabase (ou elle porte un autre nom).'};
+else AG.test={ok:false,msg:(t||'Erreur '+r.status).slice(0,200)};}
+catch(e){AG.test={ok:false,msg:'Fonction injoignable. Vérifie qu\'elle est déployée sous le nom « agenda » et que « Verify JWT » est désactivé.'};}
+render();}
+function agendaPanel(){
+let h='<section class="panel" id="ag-panel"><div class="panel-h"><h2>Agenda sur ton téléphone</h2></div>';
+if(S.mode!=='supa')return h+'<p class="muted" style="margin:0">L\'abonnement automatique marche avec les comptes en ligne (Supabase). En attendant, utilise « Exporter vers mon agenda » dans le Calendrier.</p></section>';
+if(!AG.loaded&&!AG.busy)setTimeout(agendaLoad,0);
+h+='<p class="hint" style="margin:-4px 0 12px">Abonne ton iPhone ou Google Agenda à ce lien : publications, tournages, montages, RDV, déplacements et indisponibilités s\'y mettent à jour tout seuls. Ça marche dans un seul sens : ce que tu ajoutes dans ton agenda ne revient pas ici.</p>';
+if(AG.err)h+='<p class="off-warn">'+esc(AG.err)+'</p>';
+if(!AG.loaded)return h+'<p class="hint" style="margin:0">Chargement…</p></section>';
+if(!AG.token)return h+'<button class="btn primary" data-act="ag-reset"'+(AG.busy?' disabled':'')+'>Créer mon lien d\'agenda</button></section>';
+const u=agendaUrl(AG.token);
+h+='<div class="field"><span>Ton lien secret (ne le partage pas : il donne accès à ton planning)</span><div class="link-line"><input class="inp mono" id="ag-url" value="'+esc(u)+'" readonly aria-label="Lien d\'agenda"><button class="btn small" data-act="ag-copy">'+ICON.copy+'Copier</button></div></div>';
+h+='<div class="card-f" style="margin-top:10px"><a class="btn primary" href="'+esc(agendaWebcal(AG.token))+'">Ajouter à l\'iPhone</a><a class="btn" href="'+esc('https://calendar.google.com/calendar/r?cid='+encodeURIComponent(agendaWebcal(AG.token)))+'" target="_blank" rel="noopener">Ajouter à Google Agenda</a><button class="btn" data-act="ag-test">Tester le lien</button><button class="btn danger" data-act="ag-reset" data-confirm="L\'ancien lien ne marchera plus. Sûr ?">Changer le lien</button></div>';
+if(AG.test)h+='<p class="'+(AG.test.busy?'hint':AG.test.ok?'sig-banner':'off-warn')+'" style="margin:10px 0 0">'+esc(AG.test.busy?'Test en cours…':AG.test.msg)+'</p>';
+h+='<details class="fold" id="ag-help" style="margin-top:10px"><summary>Comment m\'abonner ?</summary><ol class="hint" style="margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px">'+
+'<li><b>iPhone</b> : ouvre Studio Tefi sur l\'iPhone et touche « Ajouter à l\'iPhone », puis « S\'abonner ». Sinon : Réglages → Calendrier → Comptes → Ajouter un compte → Autre → « Ajouter un calendrier avec abonnement », et colle le lien. Dans ce même écran, tu peux choisir la fréquence de mise à jour.</li>'+
+'<li><b>Google Agenda</b> : sur ordinateur, touche « Ajouter à Google Agenda ». Sinon : Google Agenda → « Autres agendas » → + → « À partir de l\'URL », et colle le lien. Google relit le lien de lui-même, ce qui peut prendre plusieurs heures.</li>'+
+'<li>Le lien est secret : si tu penses qu\'il a circulé, touche « Changer le lien » et abonne-toi à nouveau.</li></ol></details></section>';
+return h;}
+function handleAgClick(a,el){
+switch(a){
+case'ag-reset':agendaReset();return true;
+case'ag-test':agendaTest();return true;
+case'ag-copy':if(AG.token)copyText(agendaUrl(AG.token),'Lien d\'agenda copié',$('#ag-url'));return true;
+case'ag-goto':go('settings');setTimeout(()=>{const p=$('#ag-panel');if(p&&p.scrollIntoView)p.scrollIntoView({behavior:'smooth',block:'start'});},80);return true;
+}
+return false;}
+{const _h=handleV61Click;handleV61Click=function(a,el,e){return handleAgClick(a,el)||_h(a,el,e);};}
 
 function arm(btn){
 if(btn.dataset.armed==='1')return true;

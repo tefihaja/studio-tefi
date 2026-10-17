@@ -1,5 +1,5 @@
 -- =====================================================================
---  Studio Tefi · installation Supabase (version 6.1)
+--  Studio Tefi · installation Supabase (version 6.2)
 --  À coller en entier dans Supabase → SQL Editor → New query → Run.
 --  Le script peut être relancé sans risque : il ne supprime aucune donnée.
 -- =====================================================================
@@ -297,5 +297,58 @@ begin
   begin alter publication supabase_realtime add table public.items;        exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table public.app_settings; exception when duplicate_object then null; end;
 end $$;
+
+-- 8. Lien d'abonnement agenda (iPhone, Google Agenda) — ajouté en 6.2 ------------
+--    Un code secret par rôle. Seule l'admin peut le lire ou le changer.
+--    La fonction « agenda » (Edge Function) l'utilise pour fabriquer le fichier .ics.
+create table if not exists public.agenda_links (
+  token       text primary key,
+  role        text not null default 'admin' check (role in ('admin','assistant')),
+  created_at  timestamptz not null default now()
+);
+alter table public.agenda_links enable row level security;
+revoke all on public.agenda_links from anon, authenticated;
+
+create or replace function public.agenda_link_get(p_role text default 'admin')
+returns text language plpgsql stable security definer set search_path = public as $$
+begin
+  if public.my_role() <> 'admin' then raise exception 'Réservé à l''admin' using errcode = '42501'; end if;
+  return (select token from public.agenda_links where role = p_role order by created_at desc limit 1);
+end $$;
+
+create or replace function public.agenda_link_reset(p_role text default 'admin')
+returns text language plpgsql security definer set search_path = public as $$
+declare t text;
+begin
+  if public.my_role() <> 'admin' then raise exception 'Réservé à l''admin' using errcode = '42501'; end if;
+  if p_role not in ('admin','assistant') then raise exception 'Rôle inconnu' using errcode = '22023'; end if;
+  delete from public.agenda_links where role = p_role;
+  t := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+  insert into public.agenda_links(token, role) values (t, p_role);
+  return t;
+end $$;
+
+-- Ne renvoie que ce qui sert à l'agenda : titres, dates, lieux. Jamais les scripts, factures ou réglages sensibles.
+create or replace function public.agenda_feed(p_token text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select case when length(coalesce(p_token,'')) >= 32 and exists (select 1 from public.agenda_links where token = p_token)
+  then jsonb_build_object(
+    'role', (select role from public.agenda_links where token = p_token),
+    'settings', (select jsonb_build_object('assistantName', data -> 'assistantName', 'companies', data -> 'companies',
+                        'platforms', data -> 'platforms', 'types', data -> 'types') from public.app_settings where id = 'main'),
+    'items', coalesce((select jsonb_agg(jsonb_build_object('col', col, 'id', id, 'data',
+        case col
+          when 'contents' then jsonb_build_object('title', data -> 'title', 'type', data -> 'type', 'status', data -> 'status',
+                                 'publications', data -> 'publications', 'shoots', data -> 'shoots', 'editDate', data -> 'editDate', 'cast', data -> 'cast')
+          when 'accounts' then jsonb_build_object('handle', data -> 'handle', 'platform', data -> 'platform')
+          else data end))
+      from public.items where not deleted and col in ('contents','accounts','rdv','trips','unavail')), '[]'::jsonb))
+  else null end
+$$;
+
+revoke all on function public.agenda_feed(text) from public;
+revoke all on function public.agenda_link_get(text), public.agenda_link_reset(text) from public, anon;
+grant execute on function public.agenda_feed(text) to anon, authenticated;
+grant execute on function public.agenda_link_get(text), public.agenda_link_reset(text) to authenticated;
 
 -- Terminé. Le résultat attendu est « Success. No rows returned ».
